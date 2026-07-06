@@ -1,0 +1,23 @@
+:root { color-scheme: light; --ink:#16261f; --muted:#66736d; --paper:#f4f2e9; --accent:#d86b3d; --green:#1f5d4a; }
+* { box-sizing:border-box; }
+html, body { height:100%; margin:0; }
+body { font:14px/1.45 system-ui, sans-serif; color:var(--ink); background:var(--paper); }
+.topbar { height:82px; display:flex; align-items:center; justify-content:space-between; padding:12px 24px; background:#faf9f3; border-bottom:1px solid #d9d7cd; }
+h1 { margin:0; font:600 25px/1.15 Georgia, serif; }
+.eyebrow { color:var(--accent); font-size:11px; font-weight:700; letter-spacing:.13em; text-transform:uppercase; }
+.status { display:flex; align-items:center; gap:8px; color:var(--muted); }
+.status span { width:9px; height:9px; border-radius:50%; background:#c49836; }
+.status.online span { background:#3d9168; } .status.offline span { background:#c64f43; }
+main { height:calc(100% - 82px); position:relative; }
+#map { height:100%; background:#dce6df; }
+.panel { position:absolute; z-index:1000; top:18px; left:18px; width:260px; padding:18px; border-radius:10px; background:rgba(250,249,243,.96); box-shadow:0 8px 28px #14251d30; }
+.panel section + section { border-top:1px solid #ddd9cd; margin-top:16px; padding-top:12px; }
+h2 { margin:0 0 10px; font-size:12px; letter-spacing:.1em; text-transform:uppercase; }
+label { display:block; padding:6px 0; cursor:pointer; }
+input { accent-color:var(--green); margin-right:8px; }
+button { width:100%; margin-top:14px; padding:10px; border:0; border-radius:6px; color:white; background:var(--green); font:600 13px system-ui; cursor:pointer; }
+button:hover { background:#174a3b; }
+dl { display:grid; grid-template-columns:82px 1fr; gap:5px; margin:0; } dt { color:var(--muted); } dd { margin:0; font-variant-numeric:tabular-nums; }
+.message { min-height:18px; margin:12px 0 0; color:#a34235; font-size:12px; }
+.leaflet-popup-content pre { max-width:280px; overflow:auto; white-space:pre-wrap; }
+@media (max-width:640px) { .topbar { height:68px; padding:9px 12px; } h1 { font-size:18px; } main { height:calc(100% - 68px); } .panel { top:auto; bottom:12px; left:12px; width:calc(100% - 24px); max-height:43%; overflow:auto; } }

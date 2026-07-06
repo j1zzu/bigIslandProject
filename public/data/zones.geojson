@@ -1,0 +1,9 @@
+{
+  "type": "FeatureCollection",
+  "name": "big_ussuriysky_zones",
+  "features": [
+    {"type":"Feature","properties":{"id":"zone-001","name":"Тестовая зона 1","type":"zone","source":"manual-test","epsg_source":"EPSG:32653","epsg_export":"EPSG:4326"},"geometry":{"type":"Polygon","coordinates":[[[134.78,48.40],[134.82,48.40],[134.82,48.43],[134.78,48.43],[134.78,48.40]]]}},
+    {"type":"Feature","properties":{"id":"zone-002","name":"Тестовая зона 2","type":"boundary","source":"manual-test","epsg_source":"EPSG:32653","epsg_export":"EPSG:4326"},"geometry":{"type":"Polygon","coordinates":[[[134.86,48.44],[134.91,48.44],[134.91,48.48],[134.86,48.48],[134.86,48.44]]]}},
+    {"type":"Feature","properties":{"id":"zone-003","name":"Тестовая зона 3","type":"zone","source":"manual-test","epsg_source":"EPSG:32653","epsg_export":"EPSG:4326"},"geometry":{"type":"Polygon","coordinates":[[[134.70,48.34],[134.75,48.35],[134.74,48.39],[134.69,48.38],[134.70,48.34]]]}}
+  ]
+}

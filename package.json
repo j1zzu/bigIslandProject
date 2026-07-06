@@ -1,0 +1,20 @@
+{
+  "name": "big-ussuriysky-map",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Leaflet client for geodata published by QGIS Server",
+  "main": "server/index.js",
+  "scripts": {
+    "dev": "node server/index.js --open",
+    "start": "node server/index.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "open": "^10.1.0"
+  }
+}
