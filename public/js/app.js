@@ -10,20 +10,27 @@
     if (!response.ok) throw new Error('Не удалось загрузить конфигурацию');
     return response.json();
   });
-  const map = L.map('map', { center: config.center, zoom: config.zoom, zoomControl: false });
+  const map = L.map('map', {
+    center: config.center,
+    zoom: config.zoom,
+    minZoom: 3,
+    maxZoom: 22,
+    zoomControl: false
+  });
   L.control.zoom({ position: 'bottomleft', zoomInTitle: 'Приблизить', zoomOutTitle: 'Отдалить' }).addTo(map);
   const islandBounds = L.latLngBounds([48.28, 134.62], [48.57, 135.08]);
   const layers = {};
 
   layers.basemap = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
+    maxNativeZoom: 19,
+    maxZoom: 22,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
   }).addTo(map);
 
   function createWmsLayer(layerName) {
     return L.tileLayer.wms(config.qgisWmsUrl, {
       layers: layerName, format: 'image/png', transparent: true, version: '1.3.0',
-      crs: L.CRS.EPSG3857, tiled: true, attribution: 'QGIS Server'
+      crs: L.CRS.EPSG3857, tiled: true, maxZoom: 22, attribution: 'QGIS Server'
     });
   }
   layers.yandexRoads = createWmsLayer(config.wmsLayers.yandexRoads);
