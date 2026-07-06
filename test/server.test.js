@@ -16,6 +16,8 @@ test('serves config, frontend and GeoJSON', async (t) => {
   assert.equal(config.mapEpsg, 'EPSG:3857');
   assert.equal(config.dataEpsg, 'EPSG:32653');
   assert.equal(config.qgisWmsUrl, '/qgis/wms');
+  assert.equal(config.wmsLayers.yandexRoads, 'Yandex_Roads');
+  assert.equal(config.wmsLayers.googleSatellite, 'G_Sat');
 
   const page = await fetch(base);
   assert.equal(page.status, 200);

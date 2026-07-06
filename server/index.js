@@ -9,8 +9,8 @@ dotenv.config();
 const app = express();
 const port = Number(process.env.PORT) || 3000;
 const qgisServerUrl = process.env.QGIS_SERVER_URL ||
-  'http://192.168.20.21/cgi-bin/qgis_mapserv.fcgi';
-const qgisProjectPath = process.env.QGIS_PROJECT_PATH || '';
+  'http://192.168.20.21:8080/cgi-bin/qgis_mapserv.fcgi.exe';
+const qgisProjectPath = process.env.QGIS_PROJECT_PATH || 'world2.qgz';
 const qgisTimeoutMs = Number(process.env.QGIS_TIMEOUT_MS) || 10000;
 
 app.disable('x-powered-by');
@@ -25,12 +25,14 @@ app.get('/api/config', (_req, res) => {
     center: [48.43, 134.85],
     zoom: 11,
     wmsLayers: {
-      overlay: 'revit_boundaries',
-      revitBoundaries: 'revit_boundaries'
-    },
-    wfsLayers: {
-      zones: 'zones',
-      revitBoundaries: 'revit_boundaries'
+      yandexRoads: 'Yandex_Roads',
+      ortophoto: 'Ortophoto',
+      yandexSatellite: 'YA_SAT_zoom22',
+      yandexSatelliteAlt: 'YA_SA',
+      mapbox: 'MAPBOX',
+      osm: 'OSM',
+      googleSatellite: 'G_Sat',
+      esri: 'Esri'
     }
   });
 });

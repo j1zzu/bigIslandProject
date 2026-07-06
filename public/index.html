@@ -5,30 +5,46 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Большой Уссурийский — геопортал</title>
   <link rel="preconnect" href="https://unpkg.com">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
   <header class="topbar">
-    <div><span class="eyebrow">Локальный геопортал</span><h1>Большой Уссурийский остров</h1></div>
+    <div class="brand"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><div class="brand-copy"><span class="eyebrow">Локальный геопортал</span><h1>Большой Уссурийский <span>остров</span></h1></div></div>
     <div id="qgis-status" class="status pending"><span></span>QGIS: проверка…</div>
   </header>
   <main>
-    <aside class="panel" aria-label="Управление картой">
-      <section>
-        <h2>Слои</h2>
-        <label><input id="toggle-basemap" type="checkbox" checked> Карта OpenStreetMap</label>
-        <label><input id="toggle-wms" type="checkbox"> Дополнительный WMS</label>
-        <label><input id="toggle-geojson" type="checkbox" checked> Локальные зоны</label>
-        <label><input id="toggle-wfs" type="checkbox"> Зоны WFS</label>
-        <label><input id="toggle-boundaries" type="checkbox"> Границы WFS</label>
+    <aside id="layers-panel" class="panel layers-panel" aria-label="Управление слоями">
+      <section class="layers-section">
+        <div class="section-heading"><span class="section-icon" aria-hidden="true">◫</span><div><span class="section-kicker">Управление картой</span><h2>Слои</h2></div><button id="toggle-layers-panel" class="collapse-button" type="button" aria-expanded="true" aria-controls="layers-content" aria-label="Свернуть меню слоёв"><span></span></button></div>
+        <div id="layers-content" class="layers-content">
+        <div class="layers-content-inner">
+        <div class="layer-list">
+          <label class="layer-option"><span class="layer-copy"><strong>OpenStreetMap</strong><small>Основная карта</small></span><input id="toggle-basemap" type="checkbox" checked><span class="switch" aria-hidden="true"></span></label>
+          <label class="layer-option"><span class="layer-copy"><strong>Яндекс — дороги</strong><small>QGIS · Yandex_Roads</small></span><input id="toggle-yandex-roads" type="checkbox"><span class="switch" aria-hidden="true"></span></label>
+          <label class="layer-option"><span class="layer-copy"><strong>Ортофотоплан</strong><small>QGIS · Ortophoto</small></span><input id="toggle-ortophoto" type="checkbox"><span class="switch" aria-hidden="true"></span></label>
+          <label class="layer-option"><span class="layer-copy"><strong>Яндекс — спутник</strong><small>QGIS · YA_SAT_zoom22</small></span><input id="toggle-yandex-satellite" type="checkbox"><span class="switch" aria-hidden="true"></span></label>
+          <label class="layer-option"><span class="layer-copy"><strong>Яндекс — спутник 2</strong><small>QGIS · YA_SA</small></span><input id="toggle-yandex-satellite-alt" type="checkbox"><span class="switch" aria-hidden="true"></span></label>
+          <label class="layer-option"><span class="layer-copy"><strong>Mapbox</strong><small>QGIS · MAPBOX</small></span><input id="toggle-mapbox" type="checkbox"><span class="switch" aria-hidden="true"></span></label>
+          <label class="layer-option"><span class="layer-copy"><strong>OSM через QGIS</strong><small>QGIS · OSM</small></span><input id="toggle-qgis-osm" type="checkbox"><span class="switch" aria-hidden="true"></span></label>
+          <label class="layer-option"><span class="layer-copy"><strong>Google — спутник</strong><small>QGIS · G_Sat</small></span><input id="toggle-google-satellite" type="checkbox"><span class="switch" aria-hidden="true"></span></label>
+          <label class="layer-option"><span class="layer-copy"><strong>Esri</strong><small>QGIS · Esri</small></span><input id="toggle-esri" type="checkbox"><span class="switch" aria-hidden="true"></span></label>
+          <label class="layer-option"><span class="layer-copy"><strong>Локальные зоны</strong><small>Данные GeoJSON</small></span><input id="toggle-geojson" type="checkbox" checked><span class="switch" aria-hidden="true"></span></label>
+        </div>
+        <button id="fit-island" type="button"><span>Показать остров</span><span class="button-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6"/></svg></span></button>
+        </div>
+        </div>
       </section>
-      <button id="fit-island" type="button">Показать остров</button>
+      <p id="message" class="message" role="status"></p>
+    </aside>
+    <aside class="info-panel" aria-label="Информация о карте">
       <section class="map-info">
         <h2>Карта</h2>
         <dl><dt>CRS карты</dt><dd id="crs">—</dd><dt>CRS данных</dt><dd id="data-crs">—</dd><dt>Координаты</dt><dd id="coordinates">—</dd><dt>Масштаб</dt><dd id="zoom">—</dd></dl>
       </section>
-      <p id="message" class="message" role="status"></p>
     </aside>
     <div id="map" aria-label="Интерактивная карта"></div>
   </main>

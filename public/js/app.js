@@ -10,7 +10,8 @@
     if (!response.ok) throw new Error('Не удалось загрузить конфигурацию');
     return response.json();
   });
-  const map = L.map('map', { center: config.center, zoom: config.zoom });
+  const map = L.map('map', { center: config.center, zoom: config.zoom, zoomControl: false });
+  L.control.zoom({ position: 'bottomleft', zoomInTitle: 'Приблизить', zoomOutTitle: 'Отдалить' }).addTo(map);
   const islandBounds = L.latLngBounds([48.28, 134.62], [48.57, 135.08]);
   const layers = {};
 
@@ -19,11 +20,20 @@
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
   }).addTo(map);
 
-  layers.wms = L.tileLayer.wms(config.qgisWmsUrl, {
-    layers: config.wmsLayers.overlay || config.wmsLayers.revitBoundaries,
-    format: 'image/png', transparent: true, version: '1.3.0',
-    crs: L.CRS.EPSG3857, tiled: true, attribution: 'QGIS Server'
-  });
+  function createWmsLayer(layerName) {
+    return L.tileLayer.wms(config.qgisWmsUrl, {
+      layers: layerName, format: 'image/png', transparent: true, version: '1.3.0',
+      crs: L.CRS.EPSG3857, tiled: true, attribution: 'QGIS Server'
+    });
+  }
+  layers.yandexRoads = createWmsLayer(config.wmsLayers.yandexRoads);
+  layers.ortophoto = createWmsLayer(config.wmsLayers.ortophoto);
+  layers.yandexSatellite = createWmsLayer(config.wmsLayers.yandexSatellite);
+  layers.yandexSatelliteAlt = createWmsLayer(config.wmsLayers.yandexSatelliteAlt);
+  layers.mapbox = createWmsLayer(config.wmsLayers.mapbox);
+  layers.qgisOsm = createWmsLayer(config.wmsLayers.osm);
+  layers.googleSatellite = createWmsLayer(config.wmsLayers.googleSatellite);
+  layers.esri = createWmsLayer(config.wmsLayers.esri);
 
   function popup(feature) {
     const props = feature.properties || {};
@@ -40,15 +50,6 @@
     layers.geojson.addData(await response.json());
   } catch { ui.message.textContent = 'Локальный GeoJSON недоступен.'; }
 
-  async function loadWfs(key, typeName) {
-    if (layers[key]) return layers[key];
-    const params = new URLSearchParams({ SERVICE:'WFS', VERSION:'1.1.0', REQUEST:'GetFeature', TYPENAME:typeName, OUTPUTFORMAT:'application/json', SRSNAME:'EPSG:4326' });
-    const response = await fetch(`${config.qgisWfsUrl}?${params}`);
-    if (!response.ok) throw new Error(`WFS ${typeName}: HTTP ${response.status}`);
-    const data = await response.json();
-    layers[key] = L.geoJSON(data, { style:{ color:'#176d7d', weight:2, fillOpacity:.15 }, onEachFeature:(feature, layer) => layer.bindPopup(popup(feature)) });
-    return layers[key];
-  }
   function bindToggle(id, key, loader) {
     document.querySelector(id).addEventListener('change', async (event) => {
       ui.message.textContent = '';
@@ -59,11 +60,23 @@
     });
   }
   bindToggle('#toggle-basemap', 'basemap');
-  bindToggle('#toggle-wms', 'wms');
+  bindToggle('#toggle-yandex-roads', 'yandexRoads');
+  bindToggle('#toggle-ortophoto', 'ortophoto');
+  bindToggle('#toggle-yandex-satellite', 'yandexSatellite');
+  bindToggle('#toggle-yandex-satellite-alt', 'yandexSatelliteAlt');
+  bindToggle('#toggle-mapbox', 'mapbox');
+  bindToggle('#toggle-qgis-osm', 'qgisOsm');
+  bindToggle('#toggle-google-satellite', 'googleSatellite');
+  bindToggle('#toggle-esri', 'esri');
   bindToggle('#toggle-geojson', 'geojson');
-  bindToggle('#toggle-wfs', 'wfsZones', () => loadWfs('wfsZones', config.wfsLayers.zones));
-  bindToggle('#toggle-boundaries', 'wfsBoundaries', () => loadWfs('wfsBoundaries', config.wfsLayers.revitBoundaries));
   document.querySelector('#fit-island').addEventListener('click', () => map.fitBounds(islandBounds));
+  const layersPanel = document.querySelector('#layers-panel');
+  const layersPanelButton = document.querySelector('#toggle-layers-panel');
+  layersPanelButton.addEventListener('click', () => {
+    const collapsed = layersPanel.classList.toggle('collapsed');
+    layersPanelButton.setAttribute('aria-expanded', String(!collapsed));
+    layersPanelButton.setAttribute('aria-label', collapsed ? 'Развернуть меню слоёв' : 'Свернуть меню слоёв');
+  });
 
   ui.crs.textContent = config.mapEpsg || 'EPSG:3857';
   ui.dataCrs.textContent = config.dataEpsg || 'EPSG:32653';
