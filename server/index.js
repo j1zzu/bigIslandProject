@@ -32,7 +32,8 @@ app.get('/api/config', (_req, res) => {
       mapbox: 'MAPBOX',
       osm: 'OSM',
       googleSatellite: 'G_Sat',
-      esri: 'Esri'
+      esri: 'Esri',
+      polygon90273: 'polygon_90273'
     }
   });
 });

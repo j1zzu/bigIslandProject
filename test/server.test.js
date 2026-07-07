@@ -18,10 +18,14 @@ test('serves config, frontend and GeoJSON', async (t) => {
   assert.equal(config.qgisWmsUrl, '/qgis/wms');
   assert.equal(config.wmsLayers.yandexRoads, 'Yandex_Roads');
   assert.equal(config.wmsLayers.googleSatellite, 'G_Sat');
+  assert.equal(config.wmsLayers.polygon90273, 'polygon_90273');
 
   const page = await fetch(base);
   assert.equal(page.status, 200);
-  assert.match(await page.text(), /id="map"/);
+  const html = await page.text();
+  assert.match(html, /id="map"/);
+  assert.match(html, /id="map-loader"/);
+  assert.match(html, /id="island-info-card"/);
 
   const zones = await fetch(`${base}/data/zones.geojson`).then((response) => response.json());
   assert.equal(zones.type, 'FeatureCollection');
