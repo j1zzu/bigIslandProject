@@ -23,7 +23,7 @@ app.get('/api/config', (_req, res) => {
     dataEpsg: process.env.DEFAULT_EPSG || 'EPSG:32653',
     defaultEpsg: 'EPSG:3857',
     center: [48.43, 134.85],
-    zoom: 11,
+    zoom: 12,
     wmsLayers: {
       yandexRoads: 'Yandex_Roads',
       ortophoto: 'Ortophoto',

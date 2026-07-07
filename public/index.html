@@ -23,17 +23,27 @@
         <div class="section-heading"><span class="section-icon" aria-hidden="true">◫</span><div><span class="section-kicker">Управление картой</span><h2>Слои</h2></div><button id="toggle-layers-panel" class="collapse-button" type="button" aria-expanded="true" aria-controls="layers-content" aria-label="Свернуть меню слоёв"><span></span></button></div>
         <div id="layers-content" class="layers-content">
         <div class="layers-content-inner">
-        <div class="layer-list">
-          <label class="layer-option"><span class="layer-copy"><strong>OpenStreetMap</strong><small>Основная карта</small></span><input id="toggle-basemap" type="checkbox" checked><span class="switch" aria-hidden="true"></span></label>
-          <label class="layer-option"><span class="layer-copy"><strong>Яндекс — дороги</strong><small>QGIS · Yandex_Roads</small></span><input id="toggle-yandex-roads" type="checkbox"><span class="switch" aria-hidden="true"></span></label>
-          <label class="layer-option"><span class="layer-copy"><strong>Ортофотоплан</strong><small>QGIS · Ortophoto</small></span><input id="toggle-ortophoto" type="checkbox"><span class="switch" aria-hidden="true"></span></label>
-          <label class="layer-option"><span class="layer-copy"><strong>Яндекс — спутник</strong><small>QGIS · YA_SAT_zoom22</small></span><input id="toggle-yandex-satellite" type="checkbox"><span class="switch" aria-hidden="true"></span></label>
-          <label class="layer-option"><span class="layer-copy"><strong>Яндекс — спутник 2</strong><small>QGIS · YA_SA</small></span><input id="toggle-yandex-satellite-alt" type="checkbox"><span class="switch" aria-hidden="true"></span></label>
-          <label class="layer-option"><span class="layer-copy"><strong>Mapbox</strong><small>QGIS · MAPBOX</small></span><input id="toggle-mapbox" type="checkbox"><span class="switch" aria-hidden="true"></span></label>
-          <label class="layer-option"><span class="layer-copy"><strong>OSM через QGIS</strong><small>QGIS · OSM</small></span><input id="toggle-qgis-osm" type="checkbox"><span class="switch" aria-hidden="true"></span></label>
-          <label class="layer-option"><span class="layer-copy"><strong>Google — спутник</strong><small>QGIS · G_Sat</small></span><input id="toggle-google-satellite" type="checkbox"><span class="switch" aria-hidden="true"></span></label>
-          <label class="layer-option"><span class="layer-copy"><strong>Esri</strong><small>QGIS · Esri</small></span><input id="toggle-esri" type="checkbox"><span class="switch" aria-hidden="true"></span></label>
-          <label class="layer-option"><span class="layer-copy"><strong>Полигон 90273</strong><small>QGIS · polygon_90273</small></span><input id="toggle-polygon-90273" type="checkbox"><span class="switch" aria-hidden="true"></span></label>
+        <div class="layer-groups">
+        <section class="layer-group expanded">
+          <button class="layer-group-toggle" type="button" aria-expanded="true"><span class="layer-group-icon" aria-hidden="true">◆</span><span><strong>Карты</strong><small>9 картографических слоёв</small></span><i aria-hidden="true"></i></button>
+          <div class="layer-group-content"><div class="layer-group-inner"><div class="layer-list">
+          <label class="layer-option"><span class="layer-copy"><strong>OpenStreetMap</strong><small>Основная карта</small></span><input id="toggle-basemap" data-exclusive-group="maps" type="checkbox" checked><span class="switch" aria-hidden="true"></span></label>
+          <label class="layer-option"><span class="layer-copy"><strong>Яндекс — дороги</strong><small>QGIS · Yandex_Roads</small></span><input id="toggle-yandex-roads" data-exclusive-group="maps" type="checkbox"><span class="switch" aria-hidden="true"></span></label>
+          <label class="layer-option"><span class="layer-copy"><strong>Ортофотоплан</strong><small>QGIS · Ortophoto</small></span><input id="toggle-ortophoto" data-exclusive-group="maps" type="checkbox"><span class="switch" aria-hidden="true"></span></label>
+          <label class="layer-option"><span class="layer-copy"><strong>Яндекс — спутник</strong><small>QGIS · YA_SAT_zoom22</small></span><input id="toggle-yandex-satellite" data-exclusive-group="maps" type="checkbox"><span class="switch" aria-hidden="true"></span></label>
+          <label class="layer-option"><span class="layer-copy"><strong>Яндекс — спутник 2</strong><small>QGIS · YA_SA</small></span><input id="toggle-yandex-satellite-alt" data-exclusive-group="maps" type="checkbox"><span class="switch" aria-hidden="true"></span></label>
+          <label class="layer-option"><span class="layer-copy"><strong>Mapbox</strong><small>QGIS · MAPBOX</small></span><input id="toggle-mapbox" data-exclusive-group="maps" type="checkbox"><span class="switch" aria-hidden="true"></span></label>
+          <label class="layer-option"><span class="layer-copy"><strong>OSM через QGIS</strong><small>QGIS · OSM</small></span><input id="toggle-qgis-osm" data-exclusive-group="maps" type="checkbox"><span class="switch" aria-hidden="true"></span></label>
+          <label class="layer-option"><span class="layer-copy"><strong>Google — спутник</strong><small>QGIS · G_Sat</small></span><input id="toggle-google-satellite" data-exclusive-group="maps" type="checkbox"><span class="switch" aria-hidden="true"></span></label>
+          <label class="layer-option"><span class="layer-copy"><strong>Esri</strong><small>QGIS · Esri</small></span><input id="toggle-esri" data-exclusive-group="maps" type="checkbox"><span class="switch" aria-hidden="true"></span></label>
+          </div></div></div>
+        </section>
+        <section class="layer-group">
+          <button class="layer-group-toggle" type="button" aria-expanded="false"><span class="layer-group-icon zone" aria-hidden="true">●</span><span><strong>Зоны</strong><small>Тематические границы</small></span><i aria-hidden="true"></i></button>
+          <div class="layer-group-content"><div class="layer-group-inner"><div class="layer-list">
+          <label class="layer-option"><span class="layer-copy"><strong>Полигон 90273</strong><small>QGIS · polygon_90273</small></span><input id="toggle-polygon-90273" data-exclusive-group="zones" type="checkbox"><span class="switch" aria-hidden="true"></span></label>
+          </div></div></div>
+        </section>
         </div>
         <button id="fit-island" type="button"><span>Показать остров</span><span class="button-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6"/></svg></span></button>
         </div>

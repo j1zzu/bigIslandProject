@@ -18,7 +18,7 @@
   const map = L.map('map', {
     center: config.center,
     zoom: config.zoom,
-    minZoom: 3,
+    minZoom: 12,
     maxZoom: 22,
     zoomControl: false
   });
@@ -79,7 +79,8 @@
     const rows = Object.entries(properties)
       .filter(([, value]) => value !== null && value !== undefined && String(value).trim() !== '')
       .map(([key, value]) => {
-        return `<tr><th>${escapeHtml(semanticLabels[key] || key.replaceAll('_', ' '))}</th><td><input class="zone-field-input" data-field="${escapeHtml(key)}" value="${escapeHtml(value)}" readonly></td></tr>`;
+        const locked = key === 'Ид';
+        return `<tr><th>${escapeHtml(semanticLabels[key] || key.replaceAll('_', ' '))}</th><td><input class="zone-field-input" data-field="${escapeHtml(key)}"${locked ? ' data-locked="true" title="Идентификатор изменять нельзя"' : ''} value="${escapeHtml(value)}" readonly></td></tr>`;
       })
       .join('');
     ui.zoneTitle.textContent = properties?.Наименован || 'Информация о зоне';
@@ -100,7 +101,9 @@
   }
 
   function setZoneEditMode(editing) {
-    ui.zoneBody.querySelectorAll('.zone-field-input').forEach((input) => { input.readOnly = !editing; });
+    ui.zoneBody.querySelectorAll('.zone-field-input').forEach((input) => {
+      input.readOnly = !editing || input.dataset.locked === 'true';
+    });
     ui.editZone.hidden = editing;
     ui.cancelZone.hidden = !editing;
     ui.saveZone.hidden = !editing;
@@ -117,7 +120,7 @@
       ui.zoneStatus.className = 'zone-save-status error';
       return;
     }
-    const values = [...ui.zoneBody.querySelectorAll('.zone-field-input')].map((input) => ({ name:input.dataset.field, value:input.value }));
+    const values = [...ui.zoneBody.querySelectorAll('.zone-field-input:not([data-locked="true"])')].map((input) => ({ name:input.dataset.field, value:input.value }));
     const propertiesXml = values.map(({name,value}) => `<wfs:Property><wfs:Name>${escapeXml(name)}</wfs:Name><wfs:Value>${escapeXml(value)}</wfs:Value></wfs:Property>`).join('');
     const transaction = `<?xml version="1.0" encoding="UTF-8"?><wfs:Transaction service="WFS" version="1.1.0" xmlns:wfs="http://www.opengis.net/wfs" xmlns:ogc="http://www.opengis.net/ogc"><wfs:Update typeName="${escapeXml(config.wfsLayers.polygon90273)}">${propertiesXml}<ogc:Filter><ogc:FeatureId fid="${escapeXml(activeZoneFeature.id)}"/></ogc:Filter></wfs:Update></wfs:Transaction>`;
     ui.saveZone.disabled = true;
@@ -173,15 +176,29 @@
     return layers.polygon90273;
   }
 
+  const toggleRegistry = [];
+
   function bindToggle(id, key, loader) {
     const input = document.querySelector(id);
     const option = input.closest('.layer-option');
+    toggleRegistry.push({ input, option, key });
     option.classList.toggle('active', input.checked);
     input.addEventListener('change', async (event) => {
       ui.message.textContent = '';
       try {
         const layer = loader ? await loader() : layers[key];
-        if (event.target.checked) layer.addTo(map);
+        if (event.target.checked) {
+          const group = event.target.dataset.exclusiveGroup;
+          toggleRegistry.forEach((item) => {
+            if (item.input !== event.target && item.input.dataset.exclusiveGroup === group) {
+              item.input.checked = false;
+              item.option.classList.remove('active');
+              const otherLayer = layers[item.key];
+              if (otherLayer && map.hasLayer(otherLayer)) map.removeLayer(otherLayer);
+            }
+          });
+          layer.addTo(map);
+        }
         else {
           map.removeLayer(layer);
         }
@@ -236,6 +253,13 @@
     const collapsed = layersPanel.classList.toggle('collapsed');
     layersPanelButton.setAttribute('aria-expanded', String(!collapsed));
     layersPanelButton.setAttribute('aria-label', collapsed ? 'Развернуть меню слоёв' : 'Свернуть меню слоёв');
+  });
+  document.querySelectorAll('.layer-group-toggle').forEach((button) => {
+    button.addEventListener('click', () => {
+      const group = button.closest('.layer-group');
+      const expanded = group.classList.toggle('expanded');
+      button.setAttribute('aria-expanded', String(expanded));
+    });
   });
 
   ui.crs.textContent = config.mapEpsg || 'EPSG:3857';
