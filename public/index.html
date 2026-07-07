@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Большой Уссурийский — геопортал</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="preconnect" href="https://unpkg.com">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -33,7 +34,6 @@
           <label class="layer-option"><span class="layer-copy"><strong>Google — спутник</strong><small>QGIS · G_Sat</small></span><input id="toggle-google-satellite" type="checkbox"><span class="switch" aria-hidden="true"></span></label>
           <label class="layer-option"><span class="layer-copy"><strong>Esri</strong><small>QGIS · Esri</small></span><input id="toggle-esri" type="checkbox"><span class="switch" aria-hidden="true"></span></label>
           <label class="layer-option"><span class="layer-copy"><strong>Полигон 90273</strong><small>QGIS · polygon_90273</small></span><input id="toggle-polygon-90273" type="checkbox"><span class="switch" aria-hidden="true"></span></label>
-          <label class="layer-option"><span class="layer-copy"><strong>Локальные зоны</strong><small>Данные GeoJSON</small></span><input id="toggle-geojson" type="checkbox" checked><span class="switch" aria-hidden="true"></span></label>
         </div>
         <button id="fit-island" type="button"><span>Показать остров</span><span class="button-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6"/></svg></span></button>
         </div>
@@ -48,12 +48,29 @@
       </section>
     </aside>
     <aside id="island-info-card" class="island-info-card" aria-hidden="true" aria-label="Информация о Большом Уссурийском острове">
-      <button id="close-island-info" class="island-info-close" type="button" aria-label="Закрыть информацию">×</button>
+      <button id="close-island-info" class="island-info-close" type="button" aria-label="Закрыть информацию"></button>
       <span class="island-info-kicker">Точка интереса</span>
       <h2>Большой Уссурийский остров</h2>
       <p>Остров в месте слияния рек Амур и Уссури, рядом с Хабаровском.</p>
       <dl><dt>Центр</dt><dd>48.43, 134.85</dd><dt>CRS данных</dt><dd>EPSG:32653</dd></dl>
     </aside>
+    <div id="zone-card-backdrop" class="zone-card-backdrop" aria-hidden="true">
+      <section class="zone-card" role="dialog" aria-modal="true" aria-labelledby="zone-card-title">
+        <div class="zone-card-header">
+          <div><span class="zone-card-kicker">POLYGON 90273 · СЕМАНТИКА</span><h2 id="zone-card-title">Информация о зоне</h2></div>
+          <button id="close-zone-card" class="zone-card-close" type="button" aria-label="Закрыть карточку"></button>
+        </div>
+        <div class="zone-card-table-wrap">
+          <table class="zone-card-table"><thead><tr><th>Поле</th><th>Значение</th></tr></thead><tbody id="zone-card-body"></tbody></table>
+        </div>
+        <div class="zone-card-actions">
+          <span id="zone-save-status" class="zone-save-status" role="status"></span>
+          <button id="edit-zone-card" class="zone-action zone-action-secondary" type="button">Редактировать</button>
+          <button id="cancel-zone-card" class="zone-action zone-action-secondary" type="button" hidden>Отмена</button>
+          <button id="save-zone-card" class="zone-action zone-action-primary" type="button" hidden>Сохранить</button>
+        </div>
+      </section>
+    </div>
     <div id="map-loader" class="map-loader" role="status" aria-live="polite">
       <div class="loader-content"><span class="loader-mark" aria-hidden="true"><i></i><i></i><i></i></span><strong>Загружаем карту</strong><small>Подготавливаем тайлы и слои</small></div>
     </div>

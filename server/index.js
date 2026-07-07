@@ -34,6 +34,9 @@ app.get('/api/config', (_req, res) => {
       googleSatellite: 'G_Sat',
       esri: 'Esri',
       polygon90273: 'polygon_90273'
+    },
+    wfsLayers: {
+      polygon90273: 'polygon_90273'
     }
   });
 });
@@ -51,8 +54,13 @@ async function proxyQgis(req, res, service) {
 
   try {
     const response = await fetch(target, {
+      method: req.method,
       signal: AbortSignal.timeout(qgisTimeoutMs),
-      headers: { accept: req.get('accept') || '*/*' }
+      headers: {
+        accept: req.get('accept') || '*/*',
+        ...(req.method === 'POST' ? { 'content-type': req.get('content-type') || 'text/xml' } : {})
+      },
+      body: req.method === 'POST' ? req.body : undefined
     });
     res.status(response.status);
     ['content-type', 'cache-control', 'etag', 'last-modified'].forEach((header) => {
@@ -70,6 +78,15 @@ async function proxyQgis(req, res, service) {
 
 app.get('/qgis/wms', (req, res) => proxyQgis(req, res, 'WMS'));
 app.get('/qgis/wfs', (req, res) => proxyQgis(req, res, 'WFS'));
+app.post('/qgis/wfs', express.text({ type:['text/xml','application/xml'], limit:'1mb' }), (req, res) => {
+  const transaction = typeof req.body === 'string' ? req.body : '';
+  const updatesPolygon = /<wfs:Update\s+typeName="polygon_90273"/i.test(transaction);
+  const containsForbiddenOperation = /<wfs:(?:Insert|Delete)\b/i.test(transaction);
+  if (!updatesPolygon || containsForbiddenOperation) {
+    return res.status(400).json({ error:'Only polygon_90273 WFS updates are allowed' });
+  }
+  return proxyQgis(req, res, 'WFS');
+});
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 app.use((_req, res) => res.status(404).json({ error: 'Not found' }));

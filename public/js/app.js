@@ -5,7 +5,11 @@
     status: document.querySelector('#qgis-status'), message: document.querySelector('#message'),
     crs: document.querySelector('#crs'), dataCrs: document.querySelector('#data-crs'),
     coordinates: document.querySelector('#coordinates'), zoom: document.querySelector('#zoom'),
-    loader: document.querySelector('#map-loader'), islandInfo: document.querySelector('#island-info-card')
+    loader: document.querySelector('#map-loader'), islandInfo: document.querySelector('#island-info-card'),
+    zoneCard: document.querySelector('#zone-card-backdrop'), zoneTitle: document.querySelector('#zone-card-title'),
+    zoneBody: document.querySelector('#zone-card-body'), zoneStatus:document.querySelector('#zone-save-status'),
+    editZone:document.querySelector('#edit-zone-card'), cancelZone:document.querySelector('#cancel-zone-card'),
+    saveZone:document.querySelector('#save-zone-card')
   };
   const config = await fetch('/api/config').then((response) => {
     if (!response.ok) throw new Error('Не удалось загрузить конфигурацию');
@@ -21,12 +25,11 @@
   L.control.zoom({ position: 'bottomleft', zoomInTitle: 'Приблизить', zoomOutTitle: 'Отдалить' }).addTo(map);
   const islandBounds = L.latLngBounds([48.28, 134.62], [48.57, 135.08]);
   const layers = {};
-  let polygonInfoTimer;
-  let polygonInfoRequest;
-  let polygonInfoTooltip;
   let coordinateFrame;
   let coordinateFadeTimer;
   let loaderHidden = false;
+  let islandInfoTimer;
+  let activeZoneFeature;
 
   function hideMapLoader() {
     if (!ui.loader || loaderHidden) return;
@@ -57,13 +60,6 @@
   layers.qgisOsm = createWmsLayer(config.wmsLayers.osm);
   layers.googleSatellite = createWmsLayer(config.wmsLayers.googleSatellite);
   layers.esri = createWmsLayer(config.wmsLayers.esri);
-  layers.polygon90273 = createWmsLayer(config.wmsLayers.polygon90273);
-
-  function popup(feature) {
-    const props = feature.properties || {};
-    const safe = (value) => String(value ?? '—').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-    return `<strong>${safe(props.name || 'Объект')}</strong><br>Тип: ${safe(props.type)}<br>Источник: ${safe(props.source)}`;
-  }
 
   const semanticLabels = {
     'Тип_объект': 'Тип объекта', 'Код_Тип_об': 'Код типа объекта',
@@ -77,54 +73,105 @@
     '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
   }[char]));
 
-  function semanticTable(properties) {
-    const rows = Object.entries(properties || {})
+  function showZoneCard(feature) {
+    const properties = feature.properties || {};
+    activeZoneFeature = feature;
+    const rows = Object.entries(properties)
       .filter(([, value]) => value !== null && value !== undefined && String(value).trim() !== '')
-      .map(([key, value]) => `<tr><th>${escapeHtml(semanticLabels[key] || key.replaceAll('_', ' '))}</th><td>${escapeHtml(value)}</td></tr>`)
+      .map(([key, value]) => {
+        return `<tr><th>${escapeHtml(semanticLabels[key] || key.replaceAll('_', ' '))}</th><td><input class="zone-field-input" data-field="${escapeHtml(key)}" value="${escapeHtml(value)}" readonly></td></tr>`;
+      })
       .join('');
-    return `<div class="semantic-card"><strong>Семантика зоны</strong><div class="semantic-table-wrap"><table>${rows || '<tr><td>Атрибуты отсутствуют</td></tr>'}</table></div></div>`;
+    ui.zoneTitle.textContent = properties?.Наименован || 'Информация о зоне';
+    ui.zoneBody.innerHTML = rows || '<tr><td colspan="2">Заполненные атрибуты отсутствуют</td></tr>';
+    ui.zoneStatus.textContent = '';
+    ui.zoneStatus.className = 'zone-save-status';
+    ui.editZone.hidden = false;
+    ui.cancelZone.hidden = true;
+    ui.saveZone.hidden = true;
+    ui.zoneCard.classList.add('is-visible');
+    ui.zoneCard.setAttribute('aria-hidden', 'false');
+    document.querySelector('#close-zone-card').focus();
   }
 
-  async function showPolygonInfo(event) {
-    if (!map.hasLayer(layers.polygon90273)) return;
-    polygonInfoRequest?.abort();
-    polygonInfoRequest = new AbortController();
-    const size = map.getSize();
-    const bounds = map.getBounds();
-    const southWest = map.options.crs.project(bounds.getSouthWest());
-    const northEast = map.options.crs.project(bounds.getNorthEast());
-    const point = map.latLngToContainerPoint(event.latlng);
-    const params = new URLSearchParams({
-      SERVICE:'WMS', VERSION:'1.3.0', REQUEST:'GetFeatureInfo',
-      LAYERS:config.wmsLayers.polygon90273, QUERY_LAYERS:config.wmsLayers.polygon90273,
-      INFO_FORMAT:'application/json', FEATURE_COUNT:'1', CRS:'EPSG:3857',
-      BBOX:[southWest.x, southWest.y, northEast.x, northEast.y].join(','),
-      WIDTH:String(size.x), HEIGHT:String(size.y), I:String(Math.round(point.x)), J:String(Math.round(point.y))
-    });
-    try {
-      const response = await fetch(`${config.qgisWmsUrl}?${params}`, { signal: polygonInfoRequest.signal });
-      if (!response.ok) throw new Error(`GetFeatureInfo: HTTP ${response.status}`);
-      const feature = (await response.json()).features?.[0];
-      if (!feature) {
-        if (polygonInfoTooltip) map.removeLayer(polygonInfoTooltip);
-        polygonInfoTooltip = null;
-        return;
-      }
-      if (!polygonInfoTooltip) polygonInfoTooltip = L.tooltip({ className:'semantic-tooltip', direction:'right', offset:[14,0] });
-      polygonInfoTooltip.setLatLng(event.latlng).setContent(semanticTable(feature.properties)).addTo(map);
-    } catch (error) {
-      if (error.name !== 'AbortError') ui.message.textContent = 'Не удалось получить семантику polygon_90273.';
-    }
+  function hideZoneCard() {
+    ui.zoneCard.classList.remove('is-visible');
+    ui.zoneCard.setAttribute('aria-hidden', 'true');
   }
-  layers.geojson = L.geoJSON(null, {
-    style: { color:'#d45f35', weight:2, fillColor:'#ed9d69', fillOpacity:.24 },
-    onEachFeature: (feature, layer) => layer.bindPopup(popup(feature))
-  }).addTo(map);
-  try {
-    const response = await fetch('/data/zones.geojson');
-    if (!response.ok) throw new Error();
-    layers.geojson.addData(await response.json());
-  } catch { ui.message.textContent = 'Локальный GeoJSON недоступен.'; }
+
+  function setZoneEditMode(editing) {
+    ui.zoneBody.querySelectorAll('.zone-field-input').forEach((input) => { input.readOnly = !editing; });
+    ui.editZone.hidden = editing;
+    ui.cancelZone.hidden = !editing;
+    ui.saveZone.hidden = !editing;
+    ui.zoneStatus.textContent = editing ? 'Измените значения и нажмите «Сохранить».' : '';
+  }
+
+  const escapeXml = (value) => String(value).replace(/[&<>"']/g, (char) => ({
+    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&apos;'
+  }[char]));
+
+  async function saveZoneChanges() {
+    if (!activeZoneFeature?.id) {
+      ui.zoneStatus.textContent = 'QGIS не передал идентификатор объекта.';
+      ui.zoneStatus.className = 'zone-save-status error';
+      return;
+    }
+    const values = [...ui.zoneBody.querySelectorAll('.zone-field-input')].map((input) => ({ name:input.dataset.field, value:input.value }));
+    const propertiesXml = values.map(({name,value}) => `<wfs:Property><wfs:Name>${escapeXml(name)}</wfs:Name><wfs:Value>${escapeXml(value)}</wfs:Value></wfs:Property>`).join('');
+    const transaction = `<?xml version="1.0" encoding="UTF-8"?><wfs:Transaction service="WFS" version="1.1.0" xmlns:wfs="http://www.opengis.net/wfs" xmlns:ogc="http://www.opengis.net/ogc"><wfs:Update typeName="${escapeXml(config.wfsLayers.polygon90273)}">${propertiesXml}<ogc:Filter><ogc:FeatureId fid="${escapeXml(activeZoneFeature.id)}"/></ogc:Filter></wfs:Update></wfs:Transaction>`;
+    ui.saveZone.disabled = true;
+    ui.zoneStatus.textContent = 'Сохраняем изменения…';
+    ui.zoneStatus.className = 'zone-save-status';
+    try {
+      const response = await fetch(config.qgisWfsUrl, { method:'POST', headers:{'Content-Type':'text/xml'}, body:transaction });
+      const result = await response.text();
+      if (!response.ok || /ExceptionReport|ServiceException/i.test(result)) throw new Error(`WFS-T: HTTP ${response.status}`);
+      values.forEach(({name,value}) => { activeZoneFeature.properties[name] = value; });
+      ui.zoneTitle.textContent = activeZoneFeature.properties.Наименован || 'Информация о зоне';
+      setZoneEditMode(false);
+      ui.zoneStatus.textContent = 'Изменения сохранены в QGIS.';
+      ui.zoneStatus.className = 'zone-save-status success';
+    } catch (error) {
+      ui.zoneStatus.textContent = `Не удалось сохранить: ${error.message}`;
+      ui.zoneStatus.className = 'zone-save-status error';
+    } finally { ui.saveZone.disabled = false; }
+  }
+
+  function zoneStyle(index) {
+    const hue = Math.round((index * 137.508) % 360);
+    const saturation = 62 + (index % 3) * 7;
+    const lightness = 43 + (index % 2) * 8;
+    const color = `hsl(${hue} ${saturation}% ${lightness}%)`;
+    return { color, fillColor:color, weight:2, opacity:.9, fillOpacity:.3, className:'zone-hover-animated' };
+  }
+
+  async function loadPolygon90273() {
+    if (layers.polygon90273) return layers.polygon90273;
+    const params = new URLSearchParams({
+      SERVICE:'WFS', VERSION:'1.1.0', REQUEST:'GetFeature',
+      TYPENAME:config.wfsLayers.polygon90273,
+      OUTPUTFORMAT:'application/vnd.geo+json', SRSNAME:'EPSG:4326'
+    });
+    const response = await fetch(`${config.qgisWfsUrl}?${params}`);
+    if (!response.ok) throw new Error(`polygon_90273: HTTP ${response.status}`);
+    const data = await response.json();
+    const styles = new WeakMap();
+    data.features.forEach((feature, index) => styles.set(feature, zoneStyle(index)));
+    layers.polygon90273 = L.geoJSON(data, {
+      style: (feature) => styles.get(feature),
+      onEachFeature: (feature, layer) => {
+        const baseStyle = styles.get(feature);
+        layer.on('click', () => showZoneCard(feature));
+        layer.on('mouseover', () => {
+          layer.setStyle({ weight:4, fillOpacity:.55, opacity:1 });
+          layer.bringToFront();
+        });
+        layer.on('mouseout', () => layer.setStyle(baseStyle));
+      }
+    });
+    return layers.polygon90273;
+  }
 
   function bindToggle(id, key, loader) {
     const input = document.querySelector(id);
@@ -137,10 +184,6 @@
         if (event.target.checked) layer.addTo(map);
         else {
           map.removeLayer(layer);
-          if (key === 'polygon90273' && polygonInfoTooltip) {
-            map.removeLayer(polygonInfoTooltip);
-            polygonInfoTooltip = null;
-          }
         }
         option.classList.toggle('active', event.target.checked);
       } catch (error) {
@@ -159,23 +202,33 @@
   bindToggle('#toggle-qgis-osm', 'qgisOsm');
   bindToggle('#toggle-google-satellite', 'googleSatellite');
   bindToggle('#toggle-esri', 'esri');
-  bindToggle('#toggle-polygon-90273', 'polygon90273');
-  bindToggle('#toggle-geojson', 'geojson');
+  bindToggle('#toggle-polygon-90273', 'polygon90273', loadPolygon90273);
   document.querySelector('#fit-island').addEventListener('click', () => {
     if (typeof map.flyToBounds === 'function') {
       map.flyToBounds(islandBounds, { animate:true, duration:1.5, maxZoom:13 });
     }
-    const highlight = L.circle(config.center, {
-      radius:6500, color:'#1f765a', weight:4, fillColor:'#64b18f', fillOpacity:.24,
-      interactive:false, className:'island-highlight'
-    }).addTo(map);
-    window.setTimeout(() => map.removeLayer(highlight), 2600);
     ui.islandInfo?.classList.add('is-visible');
     ui.islandInfo?.setAttribute('aria-hidden', 'false');
+    clearTimeout(islandInfoTimer);
+    islandInfoTimer = window.setTimeout(() => {
+      ui.islandInfo?.classList.remove('is-visible');
+      ui.islandInfo?.setAttribute('aria-hidden', 'true');
+    }, 5500);
   });
   document.querySelector('#close-island-info').addEventListener('click', () => {
+    clearTimeout(islandInfoTimer);
     ui.islandInfo?.classList.remove('is-visible');
     ui.islandInfo?.setAttribute('aria-hidden', 'true');
+  });
+  document.querySelector('#close-zone-card').addEventListener('click', hideZoneCard);
+  ui.editZone.addEventListener('click', () => setZoneEditMode(true));
+  ui.cancelZone.addEventListener('click', () => showZoneCard(activeZoneFeature));
+  ui.saveZone.addEventListener('click', saveZoneChanges);
+  ui.zoneCard.addEventListener('click', (event) => {
+    if (event.target === ui.zoneCard) hideZoneCard();
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && ui.zoneCard.classList.contains('is-visible')) hideZoneCard();
   });
   const layersPanel = document.querySelector('#layers-panel');
   const layersPanelButton = document.querySelector('#toggle-layers-panel');
@@ -198,13 +251,6 @@
         coordinateFrame = null;
       });
     }
-    clearTimeout(polygonInfoTimer);
-    if (map.hasLayer(layers.polygon90273)) polygonInfoTimer = setTimeout(() => showPolygonInfo(event), 180);
-  }).on('mouseout', () => {
-    clearTimeout(polygonInfoTimer);
-    polygonInfoRequest?.abort();
-    if (polygonInfoTooltip) map.removeLayer(polygonInfoTooltip);
-    polygonInfoTooltip = null;
   });
   updateZoom();
   map.whenReady(() => window.setTimeout(hideMapLoader, 900));
