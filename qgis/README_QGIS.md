@@ -17,8 +17,8 @@
 Проверка публикации:
 
 ```text
-http://192.168.20.21/cgi-bin/qgis_mapserv.fcgi?SERVICE=WMS&REQUEST=GetCapabilities&MAP=/path/to/qgis/project/big_ussuriysky.qgz
-http://192.168.20.21/cgi-bin/qgis_mapserv.fcgi?SERVICE=WFS&REQUEST=GetCapabilities&MAP=/path/to/qgis/project/big_ussuriysky.qgz
+http://192.168.20.20:8080/cgi-bin/qgis_mapserv.fcgi.exe?MAP=world2.qgz&SERVICE=WMS&REQUEST=GetCapabilities
+http://192.168.20.20:8080/cgi-bin/qgis_mapserv.fcgi.exe?MAP=world2.qgz&SERVICE=WFS&REQUEST=GetCapabilities
 ```
 
 После проверки используйте только локальные proxy URL сайта: `/qgis/wms` и `/qgis/wfs`.

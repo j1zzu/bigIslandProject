@@ -9,7 +9,7 @@ dotenv.config();
 const app = express();
 const port = Number(process.env.PORT) || 3000;
 const qgisServerUrl = process.env.QGIS_SERVER_URL ||
-  'http://192.168.20.21:8080/cgi-bin/qgis_mapserv.fcgi.exe';
+  'http://192.168.20.20:8080/cgi-bin/qgis_mapserv.fcgi.exe';
 const qgisProjectPath = process.env.QGIS_PROJECT_PATH || 'world2.qgz';
 const qgisTimeoutMs = Number(process.env.QGIS_TIMEOUT_MS) || 10000;
 
