@@ -30,6 +30,8 @@ test('serves config, frontend and GeoJSON', async (t) => {
   assert.match(html, /id="island-info-card"/);
   assert.match(html, /id="admin-login-button"/);
   assert.match(html, /id="admin-login-backdrop"/);
+  assert.match(html, /id="map-styles-button"/);
+  assert.match(html, /id="map-styles-backdrop"/);
   assert.match(html, /id="zone-card-backdrop"/);
   assert.match(html, /href="\/favicon\.svg"/);
 

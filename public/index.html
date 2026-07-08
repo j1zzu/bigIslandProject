@@ -14,9 +14,10 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><div class="brand-copy"><span class="eyebrow">Геопортал</span><h1>Большой Уссурийский <span>остров</span></h1></div></div>
+    <div class="brand"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 64 64" focusable="false"><path class="logo-water" d="M9 35c10-11 20-12 31-8 6 2 11 2 15-1"/><path class="logo-island" d="M15 33c4-11 17-19 31-13 10 4 9 19-1 25-13 8-32 3-30-12Z"/><path class="logo-route" d="M25 22c-3 8 2 14 11 19"/></svg></span><div class="brand-copy"><span class="eyebrow">Геопортал</span><h1>Большой Уссурийский <span>остров</span></h1></div></div>
     <div class="header-actions">
       <div id="qgis-status" class="status pending"><span></span>QGIS: проверка…</div>
+      <button id="map-styles-button" class="map-styles-button" type="button" aria-label="Открыть стили карты"><i aria-hidden="true"></i><span>Стили</span></button>
       <div class="admin-menu-wrap">
         <button id="admin-login-button" class="admin-login-button" type="button" aria-label="Вход"><i aria-hidden="true"></i><span>Вход</span></button>
         <div id="admin-dropdown" class="admin-dropdown" aria-hidden="true">
@@ -91,6 +92,25 @@
           <span id="admin-login-status" class="admin-login-status" role="status"></span>
           <button class="admin-submit" type="submit">Войти</button>
         </form>
+      </section>
+    </div>
+    <div id="map-styles-backdrop" class="map-styles-backdrop" aria-hidden="true">
+      <section class="map-styles-modal" role="dialog" aria-modal="true" aria-labelledby="map-styles-title">
+        <button id="close-map-styles" class="map-styles-close" type="button" aria-label="Закрыть стили карты"></button>
+        <div class="map-styles-header">
+          <span class="map-styles-kicker">Визуальный режим</span>
+          <h2 id="map-styles-title">Стили карты</h2>
+          <p>Выберите мягкую цветовую обработку подложки. Слои и координаты продолжают работать как раньше.</p>
+        </div>
+        <div class="map-styles-grid">
+          <button class="map-style-card is-active" type="button" data-map-style="default"><span class="style-preview preview-default"></span><strong>Стандартный</strong><small>Обычная карта</small></button>
+          <button class="map-style-card" type="button" data-map-style="light"><span class="style-preview preview-light"></span><strong>Светлый</strong><small>Воздушная подложка</small></button>
+          <button class="map-style-card" type="button" data-map-style="muted"><span class="style-preview preview-muted"></span><strong>Приглушённый</strong><small>Меньше насыщенности</small></button>
+          <button class="map-style-card" type="button" data-map-style="night"><span class="style-preview preview-night"></span><strong>Ночной</strong><small>Тёмный режим</small></button>
+          <button class="map-style-card" type="button" data-map-style="nature"><span class="style-preview preview-nature"></span><strong>Природный</strong><small>Зелёные оттенки</small></button>
+          <button class="map-style-card" type="button" data-map-style="contrast"><span class="style-preview preview-contrast"></span><strong>Контрастный</strong><small>Чётче дороги и подписи</small></button>
+          <button class="map-style-card" type="button" data-map-style="minimal"><span class="style-preview preview-minimal"></span><strong>Минималистичный</strong><small>Спокойный вид</small></button>
+        </div>
       </section>
     </div>
     <div id="zone-card-backdrop" class="zone-card-backdrop" aria-hidden="true">

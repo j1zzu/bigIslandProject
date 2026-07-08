@@ -14,7 +14,9 @@
     adminButton:document.querySelector('#admin-login-button'), adminBackdrop:document.querySelector('#admin-login-backdrop'),
     adminForm:document.querySelector('#admin-login-form'), adminName:document.querySelector('#admin-name'),
     adminPassword:document.querySelector('#admin-password'), adminStatus:document.querySelector('#admin-login-status'),
-    adminDropdown:document.querySelector('#admin-dropdown'), adminLogout:document.querySelector('#admin-logout-button')
+    adminDropdown:document.querySelector('#admin-dropdown'), adminLogout:document.querySelector('#admin-logout-button'),
+    stylesButton:document.querySelector('#map-styles-button'), stylesBackdrop:document.querySelector('#map-styles-backdrop'),
+    stylesClose:document.querySelector('#close-map-styles')
   };
   let adminToken = sessionStorage.getItem('bigIslandAdminToken') || '';
   let adminDisplayName = sessionStorage.getItem('bigIslandAdminName') || '';
@@ -33,6 +35,13 @@
     maxBoundsViscosity:1,
     zoomControl: false
   });
+  map.attributionControl.setPrefix('');
+  const mapContainer = map.getContainer();
+  const mapStyleClasses = ['map-style-default','map-style-light','map-style-muted','map-style-night','map-style-nature','map-style-contrast','map-style-minimal'];
+  const savedMapStyle = localStorage.getItem('bigIslandMapStyle') || 'default';
+  const cursorIndicator = document.createElement('div');
+  cursorIndicator.className = 'map-cursor-indicator';
+  mapContainer.appendChild(cursorIndicator);
   map.on('dragend zoomend moveend', () => {
     map.panInsideBounds(islandBounds, { animate: true });
   });
@@ -96,6 +105,45 @@
     window.setTimeout(() => ui.loader?.remove(), 450);
   }
 
+  function applyMapStyle(styleName) {
+    const safeStyle = ['default','light','muted','night','nature','contrast','minimal'].includes(styleName) ? styleName : 'default';
+    mapContainer.classList.remove(...mapStyleClasses);
+    mapContainer.classList.add(`map-style-${safeStyle}`);
+    localStorage.setItem('bigIslandMapStyle', safeStyle);
+    document.querySelectorAll('.map-style-card').forEach((card) => {
+      card.classList.toggle('is-active', card.dataset.mapStyle === safeStyle);
+    });
+  }
+
+  function showStylesModal() {
+    ui.stylesBackdrop.classList.add('is-visible');
+    ui.stylesBackdrop.setAttribute('aria-hidden', 'false');
+    window.setTimeout(() => ui.stylesClose.focus(), 80);
+  }
+
+  function hideStylesModal() {
+    ui.stylesBackdrop.classList.remove('is-visible');
+    ui.stylesBackdrop.setAttribute('aria-hidden', 'true');
+  }
+
+  function createMapClickRipple(event) {
+    if (event.originalEvent?.button !== 0) return;
+    const point = map.mouseEventToContainerPoint(event.originalEvent);
+    const ripple = document.createElement('div');
+    ripple.className = 'map-click-ripple';
+    ripple.style.left = `${point.x}px`;
+    ripple.style.top = `${point.y}px`;
+    mapContainer.appendChild(ripple);
+    window.setTimeout(() => ripple.remove(), 520);
+  }
+
+  function moveCursorIndicator(event) {
+    const point = map.mouseEventToContainerPoint(event.originalEvent);
+    cursorIndicator.style.left = `${point.x}px`;
+    cursorIndicator.style.top = `${point.y}px`;
+    cursorIndicator.classList.add('is-visible');
+  }
+
   layers.basemap = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxNativeZoom: 19,
     maxZoom: 22,
@@ -118,6 +166,7 @@
   layers.qgisOsm = createWmsLayer(config.wmsLayers.osm);
   layers.googleSatellite = createWmsLayer(config.wmsLayers.googleSatellite);
   layers.esri = createWmsLayer(config.wmsLayers.esri);
+  applyMapStyle(savedMapStyle);
 
   const semanticLabels = {
     'Тип_объект': 'Тип объекта', 'Код_Тип_об': 'Код типа объекта',
@@ -290,6 +339,17 @@
   bindToggle('#toggle-google-satellite', 'googleSatellite');
   bindToggle('#toggle-esri', 'esri');
   bindToggle('#toggle-polygon-90273', 'polygon90273', loadPolygon90273);
+  ui.stylesButton.addEventListener('click', showStylesModal);
+  ui.stylesClose.addEventListener('click', hideStylesModal);
+  ui.stylesBackdrop.addEventListener('click', (event) => {
+    if (event.target === ui.stylesBackdrop) hideStylesModal();
+  });
+  document.querySelectorAll('.map-style-card').forEach((card) => {
+    card.addEventListener('click', () => {
+      applyMapStyle(card.dataset.mapStyle);
+      hideStylesModal();
+    });
+  });
   updateAdminUi();
   ui.adminButton.addEventListener('click', () => {
     if (isAdmin) toggleAdminDropdown();
@@ -363,6 +423,7 @@
     if (event.key === 'Escape' && ui.zoneCard.classList.contains('is-visible')) hideZoneCard();
     if (event.key === 'Escape' && ui.islandBackdrop.classList.contains('is-visible')) hideIslandInfo();
     if (event.key === 'Escape' && ui.adminBackdrop.classList.contains('is-visible')) hideAdminModal();
+    if (event.key === 'Escape' && ui.stylesBackdrop.classList.contains('is-visible')) hideStylesModal();
   });
   const layersPanel = document.querySelector('#layers-panel');
   const layersPanelButton = document.querySelector('#toggle-layers-panel');
@@ -383,6 +444,7 @@
   ui.dataCrs.textContent = config.dataEpsg || 'EPSG:32653';
   const updateZoom = () => { ui.zoom.textContent = map.getZoom(); };
   map.on('zoomend', updateZoom).on('mousemove', (event) => {
+    moveCursorIndicator(event);
     if (!coordinateFrame) {
       coordinateFrame = window.requestAnimationFrame(() => {
         ui.coordinates.classList.add('is-updating');
@@ -393,6 +455,16 @@
       });
     }
   });
+  map.on('mouseout', () => cursorIndicator.classList.remove('is-visible'));
+  map.on('dragstart', () => {
+    mapContainer.classList.add('map-is-dragging');
+    cursorIndicator.classList.add('is-dragging');
+  });
+  map.on('dragend', () => {
+    mapContainer.classList.remove('map-is-dragging');
+    cursorIndicator.classList.remove('is-dragging');
+  });
+  map.on('click', createMapClickRipple);
   updateZoom();
   map.whenReady(() => window.setTimeout(hideMapLoader, 900));
   try {
