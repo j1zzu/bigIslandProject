@@ -37,7 +37,7 @@
   });
   map.attributionControl.setPrefix('');
   const mapContainer = map.getContainer();
-  const mapStyleClasses = ['map-style-default','map-style-light','map-style-muted','map-style-night','map-style-nature','map-style-contrast','map-style-minimal'];
+  const mapStyleClasses = ['map-style-default','map-style-light','map-style-muted','map-style-night','map-style-nature','map-style-contrast','map-style-minimal','map-style-amur-mist','map-style-emerald-island'];
   const savedMapStyle = localStorage.getItem('bigIslandMapStyle') || 'default';
   const cursorIndicator = document.createElement('div');
   cursorIndicator.className = 'map-cursor-indicator';
@@ -106,7 +106,7 @@
   }
 
   function applyMapStyle(styleName) {
-    const safeStyle = ['default','light','muted','night','nature','contrast','minimal'].includes(styleName) ? styleName : 'default';
+    const safeStyle = ['default','light','muted','night','nature','contrast','minimal','amur-mist','emerald-island'].includes(styleName) ? styleName : 'default';
     mapContainer.classList.remove(...mapStyleClasses);
     mapContainer.classList.add(`map-style-${safeStyle}`);
     localStorage.setItem('bigIslandMapStyle', safeStyle);

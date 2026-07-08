@@ -14,7 +14,7 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 64 64" focusable="false"><path class="logo-water" d="M9 35c10-11 20-12 31-8 6 2 11 2 15-1"/><path class="logo-island" d="M15 33c4-11 17-19 31-13 10 4 9 19-1 25-13 8-32 3-30-12Z"/><path class="logo-route" d="M25 22c-3 8 2 14 11 19"/></svg></span><div class="brand-copy"><span class="eyebrow">Геопортал</span><h1>Большой Уссурийский <span>остров</span></h1></div></div>
+    <div class="brand"><span class="brand-mark" aria-hidden="true"><img src="/vacation-beach-icon.svg" alt=""></span><div class="brand-copy"><span class="eyebrow">Геопортал</span><h1>Большой Уссурийский <span>остров</span></h1></div></div>
     <div class="header-actions">
       <div id="qgis-status" class="status pending"><span></span>QGIS: проверка…</div>
       <button id="map-styles-button" class="map-styles-button" type="button" aria-label="Открыть стили карты"><i aria-hidden="true"></i><span>Стили</span></button>
@@ -34,7 +34,7 @@
         <div class="layers-content-inner">
         <div class="layer-groups">
         <section class="layer-group expanded">
-          <button class="layer-group-toggle" type="button" aria-expanded="true"><span class="layer-group-icon" aria-hidden="true">◆</span><span><strong>Карты</strong><small>9 картографических слоёв</small></span><i aria-hidden="true"></i></button>
+          <button class="layer-group-toggle" type="button" aria-expanded="true"><span class="layer-group-icon-wrap" aria-hidden="true"><svg class="layer-group-icon" viewBox="0 0 24 24"><path d="M4 6.5 9 4l6 2.5 5-2.5v13.5l-5 2.5-6-2.5-5 2.5V6.5Z"/><path d="M9 4v13.5M15 6.5V20"/></svg></span><span><strong>Карты</strong><small>9 картографических слоёв</small></span><i aria-hidden="true"></i></button>
           <div class="layer-group-content"><div class="layer-group-inner"><div class="layer-list">
           <label class="layer-option"><span class="layer-copy"><strong>OpenStreetMap</strong><small>Основная карта</small></span><input id="toggle-basemap" data-exclusive-group="maps" type="checkbox" checked><span class="switch" aria-hidden="true"></span></label>
           <label class="layer-option"><span class="layer-copy"><strong>Яндекс — дороги</strong><small>QGIS · Yandex_Roads</small></span><input id="toggle-yandex-roads" data-exclusive-group="maps" type="checkbox"><span class="switch" aria-hidden="true"></span></label>
@@ -48,7 +48,7 @@
           </div></div></div>
         </section>
         <section class="layer-group">
-          <button class="layer-group-toggle" type="button" aria-expanded="false"><span class="layer-group-icon zone" aria-hidden="true">●</span><span><strong>Зоны</strong><small>Тематические границы</small></span><i aria-hidden="true"></i></button>
+          <button class="layer-group-toggle" type="button" aria-expanded="false"><span class="layer-group-icon-wrap layer-group-icon-wrap--zones" aria-hidden="true"><svg class="layer-group-icon" viewBox="0 0 24 24"><path d="M7 5.5 15.5 4l4 6.5-2.8 7.5-8.8 1.5L4 13l3-7.5Z"/><circle cx="7" cy="5.5" r="1.45"/><circle cx="15.5" cy="4" r="1.45"/><circle cx="19.5" cy="10.5" r="1.45"/><circle cx="16.7" cy="18" r="1.45"/><circle cx="7.9" cy="19.5" r="1.45"/><circle cx="4" cy="13" r="1.45"/></svg></span><span><strong>Зоны</strong><small>Тематические границы</small></span><i aria-hidden="true"></i></button>
           <div class="layer-group-content"><div class="layer-group-inner"><div class="layer-list">
           <label class="layer-option"><span class="layer-copy"><strong>Полигон 90273</strong><small>QGIS · polygon_90273</small></span><input id="toggle-polygon-90273" data-exclusive-group="zones" type="checkbox"><span class="switch" aria-hidden="true"></span></label>
           </div></div></div>
@@ -110,6 +110,8 @@
           <button class="map-style-card" type="button" data-map-style="nature"><span class="style-preview preview-nature"></span><strong>Природный</strong><small>Зелёные оттенки</small></button>
           <button class="map-style-card" type="button" data-map-style="contrast"><span class="style-preview preview-contrast"></span><strong>Контрастный</strong><small>Чётче дороги и подписи</small></button>
           <button class="map-style-card" type="button" data-map-style="minimal"><span class="style-preview preview-minimal"></span><strong>Минималистичный</strong><small>Спокойный вид</small></button>
+          <button class="map-style-card" type="button" data-map-style="amur-mist"><span class="style-preview preview-amur-mist"></span><strong>Амурский туман</strong><small>Мягкая холодная подложка</small></button>
+          <button class="map-style-card" type="button" data-map-style="emerald-island"><span class="style-preview preview-emerald-island"></span><strong>Изумрудный остров</strong><small>Глубокие природные оттенки</small></button>
         </div>
       </section>
     </div>

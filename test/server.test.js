@@ -34,10 +34,15 @@ test('serves config, frontend and GeoJSON', async (t) => {
   assert.match(html, /id="map-styles-backdrop"/);
   assert.match(html, /id="zone-card-backdrop"/);
   assert.match(html, /href="\/favicon\.svg"/);
+  assert.match(html, /src="\/vacation-beach-icon\.svg"/);
 
   const favicon = await fetch(`${base}/favicon.svg`);
   assert.equal(favicon.status, 200);
   assert.match(favicon.headers.get('content-type'), /image\/svg\+xml/);
+
+  const logo = await fetch(`${base}/vacation-beach-icon.svg`);
+  assert.equal(logo.status, 200);
+  assert.match(logo.headers.get('content-type'), /image\/svg\+xml/);
 
   const forbiddenTransaction = await fetch(`${base}/qgis/wfs`, {
     method:'POST', headers:{'content-type':'text/xml'}, body:'<wfs:Delete />'
