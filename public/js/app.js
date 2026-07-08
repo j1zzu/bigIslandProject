@@ -6,30 +6,88 @@
     crs: document.querySelector('#crs'), dataCrs: document.querySelector('#data-crs'),
     coordinates: document.querySelector('#coordinates'), zoom: document.querySelector('#zoom'),
     loader: document.querySelector('#map-loader'), islandInfo: document.querySelector('#island-info-card'),
+    islandBackdrop:document.querySelector('#island-info-backdrop'),
     zoneCard: document.querySelector('#zone-card-backdrop'), zoneTitle: document.querySelector('#zone-card-title'),
     zoneBody: document.querySelector('#zone-card-body'), zoneStatus:document.querySelector('#zone-save-status'),
     editZone:document.querySelector('#edit-zone-card'), cancelZone:document.querySelector('#cancel-zone-card'),
-    saveZone:document.querySelector('#save-zone-card')
+    saveZone:document.querySelector('#save-zone-card'),
+    adminButton:document.querySelector('#admin-login-button'), adminBackdrop:document.querySelector('#admin-login-backdrop'),
+    adminForm:document.querySelector('#admin-login-form'), adminName:document.querySelector('#admin-name'),
+    adminPassword:document.querySelector('#admin-password'), adminStatus:document.querySelector('#admin-login-status'),
+    adminDropdown:document.querySelector('#admin-dropdown'), adminLogout:document.querySelector('#admin-logout-button')
   };
+  let adminToken = sessionStorage.getItem('bigIslandAdminToken') || '';
+  let adminDisplayName = sessionStorage.getItem('bigIslandAdminName') || '';
+  let isAdmin = Boolean(adminToken);
   const config = await fetch('/api/config').then((response) => {
     if (!response.ok) throw new Error('Не удалось загрузить конфигурацию');
     return response.json();
   });
+  const islandBounds = L.latLngBounds([48.26, 134.59], [48.505, 135.20]);
   const map = L.map('map', {
     center: config.center,
     zoom: config.zoom,
     minZoom: 12,
     maxZoom: 22,
+    maxBounds:islandBounds,
+    maxBoundsViscosity:1,
     zoomControl: false
   });
+  map.on('dragend zoomend moveend', () => {
+    map.panInsideBounds(islandBounds, { animate: true });
+  });
   L.control.zoom({ position: 'bottomleft', zoomInTitle: 'Приблизить', zoomOutTitle: 'Отдалить' }).addTo(map);
-  const islandBounds = L.latLngBounds([48.28, 134.62], [48.57, 135.08]);
   const layers = {};
   let coordinateFrame;
   let coordinateFadeTimer;
   let loaderHidden = false;
-  let islandInfoTimer;
   let activeZoneFeature;
+
+  function updateAdminUi() {
+    ui.adminButton.classList.toggle('is-admin', isAdmin);
+    ui.status.classList.toggle('admin-visible', isAdmin);
+    ui.adminButton.querySelector('span:last-child').textContent = isAdmin ? (adminDisplayName || 'Администратор') : 'Вход';
+    ui.adminButton.setAttribute('aria-label', isAdmin ? `Администратор ${adminDisplayName || ''}`.trim() : 'Вход');
+    if (!isAdmin) {
+      ui.adminDropdown.classList.remove('is-visible');
+      ui.adminDropdown.setAttribute('aria-hidden', 'true');
+    }
+    if (ui.zoneCard.classList.contains('is-visible') && activeZoneFeature) showZoneCard(activeZoneFeature);
+  }
+
+  function setQgisStatus(online) {
+    ui.status.className = `status ${online ? 'online' : 'offline'}${isAdmin ? ' admin-visible' : ''}`;
+    ui.status.innerHTML = `<span></span>QGIS: ${online ? 'online' : 'offline'}`;
+  }
+
+  function toggleAdminDropdown() {
+    const visible = ui.adminDropdown.classList.toggle('is-visible');
+    ui.adminDropdown.setAttribute('aria-hidden', String(!visible));
+  }
+
+  function logoutAdmin() {
+    isAdmin = false;
+    adminToken = '';
+    adminDisplayName = '';
+    sessionStorage.removeItem('bigIslandAdminToken');
+    sessionStorage.removeItem('bigIslandAdminName');
+    setZoneEditMode(false);
+    updateAdminUi();
+  }
+
+  function showAdminModal() {
+    ui.adminStatus.textContent = isAdmin ? 'Вы уже вошли как администратор.' : '';
+    ui.adminStatus.className = 'admin-login-status';
+    ui.adminForm.reset();
+    ui.adminBackdrop.classList.add('is-visible');
+    ui.adminBackdrop.setAttribute('aria-hidden', 'false');
+    window.setTimeout(() => ui.adminName.focus(), 80);
+  }
+
+  function hideAdminModal() {
+    ui.adminBackdrop.classList.remove('is-visible');
+    ui.adminBackdrop.setAttribute('aria-hidden', 'true');
+  }
 
   function hideMapLoader() {
     if (!ui.loader || loaderHidden) return;
@@ -85,9 +143,9 @@
       .join('');
     ui.zoneTitle.textContent = properties?.Наименован || 'Информация о зоне';
     ui.zoneBody.innerHTML = rows || '<tr><td colspan="2">Заполненные атрибуты отсутствуют</td></tr>';
-    ui.zoneStatus.textContent = '';
+    ui.zoneStatus.textContent = isAdmin ? '' : 'Редактирование доступно только администратору.';
     ui.zoneStatus.className = 'zone-save-status';
-    ui.editZone.hidden = false;
+    ui.editZone.hidden = !isAdmin;
     ui.cancelZone.hidden = true;
     ui.saveZone.hidden = true;
     ui.zoneCard.classList.add('is-visible');
@@ -101,6 +159,12 @@
   }
 
   function setZoneEditMode(editing) {
+    if (editing && !isAdmin) {
+      ui.zoneStatus.textContent = 'Сначала войдите как администратор.';
+      ui.zoneStatus.className = 'zone-save-status error';
+      showAdminModal();
+      return;
+    }
     ui.zoneBody.querySelectorAll('.zone-field-input').forEach((input) => {
       input.readOnly = !editing || input.dataset.locked === 'true';
     });
@@ -115,6 +179,12 @@
   }[char]));
 
   async function saveZoneChanges() {
+    if (!isAdmin) {
+      ui.zoneStatus.textContent = 'Сохранять изменения может только администратор.';
+      ui.zoneStatus.className = 'zone-save-status error';
+      showAdminModal();
+      return;
+    }
     if (!activeZoneFeature?.id) {
       ui.zoneStatus.textContent = 'QGIS не передал идентификатор объекта.';
       ui.zoneStatus.className = 'zone-save-status error';
@@ -127,7 +197,7 @@
     ui.zoneStatus.textContent = 'Сохраняем изменения…';
     ui.zoneStatus.className = 'zone-save-status';
     try {
-      const response = await fetch(config.qgisWfsUrl, { method:'POST', headers:{'Content-Type':'text/xml'}, body:transaction });
+      const response = await fetch(config.qgisWfsUrl, { method:'POST', headers:{'Content-Type':'text/xml','X-Admin-Token':adminToken}, body:transaction });
       const result = await response.text();
       if (!response.ok || /ExceptionReport|ServiceException/i.test(result)) throw new Error(`WFS-T: HTTP ${response.status}`);
       values.forEach(({name,value}) => { activeZoneFeature.properties[name] = value; });
@@ -220,22 +290,67 @@
   bindToggle('#toggle-google-satellite', 'googleSatellite');
   bindToggle('#toggle-esri', 'esri');
   bindToggle('#toggle-polygon-90273', 'polygon90273', loadPolygon90273);
-  document.querySelector('#fit-island').addEventListener('click', () => {
-    if (typeof map.flyToBounds === 'function') {
-      map.flyToBounds(islandBounds, { animate:true, duration:1.5, maxZoom:13 });
-    }
-    ui.islandInfo?.classList.add('is-visible');
-    ui.islandInfo?.setAttribute('aria-hidden', 'false');
-    clearTimeout(islandInfoTimer);
-    islandInfoTimer = window.setTimeout(() => {
-      ui.islandInfo?.classList.remove('is-visible');
-      ui.islandInfo?.setAttribute('aria-hidden', 'true');
-    }, 5500);
+  updateAdminUi();
+  ui.adminButton.addEventListener('click', () => {
+    if (isAdmin) toggleAdminDropdown();
+    else showAdminModal();
   });
-  document.querySelector('#close-island-info').addEventListener('click', () => {
-    clearTimeout(islandInfoTimer);
-    ui.islandInfo?.classList.remove('is-visible');
-    ui.islandInfo?.setAttribute('aria-hidden', 'true');
+  ui.adminLogout.addEventListener('click', logoutAdmin);
+  document.addEventListener('click', (event) => {
+    if (!event.target.closest('.admin-menu-wrap')) {
+      ui.adminDropdown.classList.remove('is-visible');
+      ui.adminDropdown.setAttribute('aria-hidden', 'true');
+    }
+  });
+  document.querySelector('#close-admin-login').addEventListener('click', hideAdminModal);
+  ui.adminBackdrop.addEventListener('click', (event) => {
+    if (event.target === ui.adminBackdrop) hideAdminModal();
+  });
+  ui.adminForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const login = ui.adminName.value.trim();
+    const password = ui.adminPassword.value;
+    ui.adminStatus.textContent = 'Проверяем доступ…';
+    ui.adminStatus.className = 'admin-login-status';
+    fetch('/api/admin/login', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ login, password })
+    }).then(async (response) => {
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Неверный логин или пароль.');
+      adminToken = data.token;
+      adminDisplayName = login;
+      isAdmin = true;
+      sessionStorage.setItem('bigIslandAdminToken', adminToken);
+      sessionStorage.setItem('bigIslandAdminName', adminDisplayName);
+      ui.adminStatus.textContent = 'Вход выполнен. Теперь редактирование зон доступно.';
+      ui.adminStatus.className = 'admin-login-status success';
+      updateAdminUi();
+      window.setTimeout(hideAdminModal, 900);
+    }).catch(() => {
+      isAdmin = false;
+      adminToken = '';
+      adminDisplayName = '';
+      sessionStorage.removeItem('bigIslandAdminToken');
+      sessionStorage.removeItem('bigIslandAdminName');
+      ui.adminStatus.textContent = 'Неверный логин или пароль.';
+      ui.adminStatus.className = 'admin-login-status error';
+      updateAdminUi();
+    });
+  });
+  document.querySelector('#show-island-description').addEventListener('click', () => {
+    ui.islandBackdrop.classList.add('is-visible');
+    ui.islandBackdrop.setAttribute('aria-hidden', 'false');
+    document.querySelector('#close-island-info').focus();
+  });
+  const hideIslandInfo = () => {
+    ui.islandBackdrop.classList.remove('is-visible');
+    ui.islandBackdrop.setAttribute('aria-hidden', 'true');
+  };
+  document.querySelector('#close-island-info').addEventListener('click', hideIslandInfo);
+  ui.islandBackdrop.addEventListener('click', (event) => {
+    if (event.target === ui.islandBackdrop) hideIslandInfo();
   });
   document.querySelector('#close-zone-card').addEventListener('click', hideZoneCard);
   ui.editZone.addEventListener('click', () => setZoneEditMode(true));
@@ -246,6 +361,8 @@
   });
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && ui.zoneCard.classList.contains('is-visible')) hideZoneCard();
+    if (event.key === 'Escape' && ui.islandBackdrop.classList.contains('is-visible')) hideIslandInfo();
+    if (event.key === 'Escape' && ui.adminBackdrop.classList.contains('is-visible')) hideAdminModal();
   });
   const layersPanel = document.querySelector('#layers-panel');
   const layersPanelButton = document.querySelector('#toggle-layers-panel');
@@ -281,7 +398,6 @@
   try {
     const params = new URLSearchParams({ SERVICE:'WMS', REQUEST:'GetCapabilities' });
     const ok = (await fetch(`${config.qgisWmsUrl}?${params}`)).ok;
-    ui.status.className = `status ${ok ? 'online' : 'offline'}`;
-    ui.status.innerHTML = `<span></span>QGIS: ${ok ? 'online' : 'offline'}`;
-  } catch { ui.status.className = 'status offline'; ui.status.innerHTML = '<span></span>QGIS: offline'; }
+    setQgisStatus(ok);
+  } catch { setQgisStatus(false); }
 })();

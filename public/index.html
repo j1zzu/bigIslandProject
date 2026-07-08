@@ -14,8 +14,16 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><div class="brand-copy"><span class="eyebrow">Локальный геопортал</span><h1>Большой Уссурийский <span>остров</span></h1></div></div>
-    <div id="qgis-status" class="status pending"><span></span>QGIS: проверка…</div>
+    <div class="brand"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><div class="brand-copy"><span class="eyebrow">Геопортал</span><h1>Большой Уссурийский <span>остров</span></h1></div></div>
+    <div class="header-actions">
+      <div id="qgis-status" class="status pending"><span></span>QGIS: проверка…</div>
+      <div class="admin-menu-wrap">
+        <button id="admin-login-button" class="admin-login-button" type="button" aria-label="Вход"><i aria-hidden="true"></i><span>Вход</span></button>
+        <div id="admin-dropdown" class="admin-dropdown" aria-hidden="true">
+          <button id="admin-logout-button" class="admin-logout-button" type="button">Выйти</button>
+        </div>
+      </div>
+    </div>
   </header>
   <main>
     <aside id="layers-panel" class="panel layers-panel" aria-label="Управление слоями">
@@ -45,7 +53,7 @@
           </div></div></div>
         </section>
         </div>
-        <button id="fit-island" type="button"><span>Показать остров</span><span class="button-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6"/></svg></span></button>
+        <button id="show-island-description" type="button"><span>Описание острова</span><span class="button-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6"/></svg></span></button>
         </div>
         </div>
       </section>
@@ -57,13 +65,34 @@
         <dl><dt>CRS карты</dt><dd id="crs">—</dd><dt>CRS данных</dt><dd id="data-crs">—</dd><dt>Координаты</dt><dd id="coordinates">—</dd><dt>Масштаб</dt><dd id="zoom">—</dd></dl>
       </section>
     </aside>
-    <aside id="island-info-card" class="island-info-card" aria-hidden="true" aria-label="Информация о Большом Уссурийском острове">
-      <button id="close-island-info" class="island-info-close" type="button" aria-label="Закрыть информацию"></button>
-      <span class="island-info-kicker">Точка интереса</span>
-      <h2>Большой Уссурийский остров</h2>
-      <p>Остров в месте слияния рек Амур и Уссури, рядом с Хабаровском.</p>
-      <dl><dt>Центр</dt><dd>48.43, 134.85</dd><dt>CRS данных</dt><dd>EPSG:32653</dd></dl>
-    </aside>
+    <div id="island-info-backdrop" class="island-modal-backdrop" aria-hidden="true">
+      <section id="island-info-card" class="island-modal" role="dialog" aria-modal="true" aria-labelledby="island-modal-title">
+        <button id="close-island-info" class="island-info-close" type="button" aria-label="Закрыть описание"></button>
+        <div class="island-modal-visual" aria-hidden="true"><span></span><i></i><i></i><i></i></div>
+        <div class="island-modal-content">
+          <span class="island-info-kicker">География · Хабаровский край</span>
+          <h2 id="island-modal-title">Большой Уссурийский остров</h2>
+          <p>Остров расположен у Хабаровска, в месте слияния рек Амур и Уссури. Это крупная пойменная территория с протоками, заболоченными участками и природными зонами Приамурья.</p>
+          <p>Геопортал показывает картографические материалы, спутниковые подложки и тематические границы.</p>
+          <dl><dt>Центр карты</dt><dd>48.38020, 134.89391</dd><dt>CRS данных</dt><dd>EPSG:32653</dd><dt>CRS карты</dt><dd>EPSG:3857</dd></dl>
+        </div>
+      </section>
+    </div>
+    <div id="admin-login-backdrop" class="admin-login-backdrop" aria-hidden="true">
+      <section class="admin-login-modal" role="dialog" aria-modal="true" aria-labelledby="admin-login-title">
+        <button id="close-admin-login" class="admin-login-close" type="button" aria-label="Закрыть вход"></button>
+        <div class="admin-login-hero" aria-hidden="true"><span></span></div>
+        <form id="admin-login-form" class="admin-login-form">
+          <span class="admin-login-kicker">Доступ к редактированию</span>
+          <h2 id="admin-login-title">Вход</h2>
+          <p>После входа можно редактировать семантику зон. Идентификатор зоны останется защищённым.</p>
+          <label><span>Имя на сайте</span><input id="admin-name" name="admin-name" autocomplete="username" required></label>
+          <label><span>Пароль</span><input id="admin-password" name="admin-password" type="password" autocomplete="current-password" required></label>
+          <span id="admin-login-status" class="admin-login-status" role="status"></span>
+          <button class="admin-submit" type="submit">Войти</button>
+        </form>
+      </section>
+    </div>
     <div id="zone-card-backdrop" class="zone-card-backdrop" aria-hidden="true">
       <section class="zone-card" role="dialog" aria-modal="true" aria-labelledby="zone-card-title">
         <div class="zone-card-header">

@@ -28,6 +28,8 @@ test('serves config, frontend and GeoJSON', async (t) => {
   assert.match(html, /id="map"/);
   assert.match(html, /id="map-loader"/);
   assert.match(html, /id="island-info-card"/);
+  assert.match(html, /id="admin-login-button"/);
+  assert.match(html, /id="admin-login-backdrop"/);
   assert.match(html, /id="zone-card-backdrop"/);
   assert.match(html, /href="\/favicon\.svg"/);
 
@@ -38,7 +40,21 @@ test('serves config, frontend and GeoJSON', async (t) => {
   const forbiddenTransaction = await fetch(`${base}/qgis/wfs`, {
     method:'POST', headers:{'content-type':'text/xml'}, body:'<wfs:Delete />'
   });
-  assert.equal(forbiddenTransaction.status, 400);
+  assert.equal(forbiddenTransaction.status, 401);
+
+  const login = await fetch(`${base}/api/admin/login`, {
+    method:'POST',
+    headers:{'content-type':'application/json'},
+    body:JSON.stringify({ login:'admin', password:'bigIsland2026' })
+  });
+  assert.equal(login.status, 200);
+  const { token } = await login.json();
+  assert.ok(token);
+
+  const forbiddenAdminTransaction = await fetch(`${base}/qgis/wfs`, {
+    method:'POST', headers:{'content-type':'text/xml','x-admin-token':token}, body:'<wfs:Delete />'
+  });
+  assert.equal(forbiddenAdminTransaction.status, 400);
 
   const zones = await fetch(`${base}/data/zones.geojson`).then((response) => response.json());
   assert.equal(zones.type, 'FeatureCollection');

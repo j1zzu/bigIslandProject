@@ -1,6 +1,7 @@
 'use strict';
 
 const path = require('node:path');
+const crypto = require('node:crypto');
 const express = require('express');
 const dotenv = require('dotenv');
 
@@ -12,8 +13,12 @@ const qgisServerUrl = process.env.QGIS_SERVER_URL ||
   'http://192.168.20.20:8080/cgi-bin/qgis_mapserv.fcgi.exe';
 const qgisProjectPath = process.env.QGIS_PROJECT_PATH || 'world2.qgz';
 const qgisTimeoutMs = Number(process.env.QGIS_TIMEOUT_MS) || 10000;
+const adminLogin = process.env.ADMIN_LOGIN || 'admin';
+const adminPassword = process.env.ADMIN_PASSWORD || 'bigIsland2026';
+const adminTokens = new Set();
 
 app.disable('x-powered-by');
+app.use('/api', express.json({ limit: '32kb' }));
 
 app.get('/api/config', (_req, res) => {
   res.json({
@@ -22,7 +27,7 @@ app.get('/api/config', (_req, res) => {
     mapEpsg: 'EPSG:3857',
     dataEpsg: process.env.DEFAULT_EPSG || 'EPSG:32653',
     defaultEpsg: 'EPSG:3857',
-    center: [48.43, 134.85],
+    center: [48.38020, 134.89391],
     zoom: 12,
     wmsLayers: {
       yandexRoads: 'Yandex_Roads',
@@ -40,6 +45,21 @@ app.get('/api/config', (_req, res) => {
     }
   });
 });
+
+app.post('/api/admin/login', (req, res) => {
+  const { login, password } = req.body || {};
+  if (login !== adminLogin || password !== adminPassword) {
+    return res.status(401).json({ error: 'Invalid admin credentials' });
+  }
+  const token = crypto.randomBytes(24).toString('hex');
+  adminTokens.add(token);
+  return res.json({ token, name: login });
+});
+
+function isAdminRequest(req) {
+  const token = req.get('x-admin-token');
+  return Boolean(token && adminTokens.has(token));
+}
 
 async function proxyQgis(req, res, service) {
   const target = new URL(qgisServerUrl);
@@ -79,6 +99,9 @@ async function proxyQgis(req, res, service) {
 app.get('/qgis/wms', (req, res) => proxyQgis(req, res, 'WMS'));
 app.get('/qgis/wfs', (req, res) => proxyQgis(req, res, 'WFS'));
 app.post('/qgis/wfs', express.text({ type:['text/xml','application/xml'], limit:'1mb' }), (req, res) => {
+  if (!isAdminRequest(req)) {
+    return res.status(401).json({ error:'Admin login is required for WFS updates' });
+  }
   const transaction = typeof req.body === 'string' ? req.body : '';
   const updatesPolygon = /<wfs:Update\s+typeName="polygon_90273"/i.test(transaction);
   const containsForbiddenOperation = /<wfs:(?:Insert|Delete)\b/i.test(transaction);
