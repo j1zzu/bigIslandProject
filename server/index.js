@@ -13,6 +13,7 @@ const qgisServerUrl = process.env.QGIS_SERVER_URL ||
   'http://192.168.20.20:8080/cgi-bin/qgis_mapserv.fcgi.exe';
 const qgisProjectPath = process.env.QGIS_PROJECT_PATH || 'world2.qgz';
 const qgisTimeoutMs = Number(process.env.QGIS_TIMEOUT_MS) || 10000;
+const localTilesDir = process.env.LOCAL_TILES_DIR || 'C:\\island_imgs\\tile';
 const adminLogin = process.env.ADMIN_LOGIN || 'admin';
 const adminPassword = process.env.ADMIN_PASSWORD || 'bigIsland2026';
 const adminTokens = new Set();
@@ -24,6 +25,7 @@ app.get('/api/config', (_req, res) => {
   res.json({
     qgisWmsUrl: '/qgis/wms',
     qgisWfsUrl: '/qgis/wfs',
+    localTilesUrl: '/local-tiles/{z}/{x}/{y}.png',
     mapEpsg: 'EPSG:3857',
     dataEpsg: process.env.DEFAULT_EPSG || 'EPSG:32653',
     defaultEpsg: 'EPSG:3857',
@@ -110,6 +112,11 @@ app.post('/qgis/wfs', express.text({ type:['text/xml','application/xml'], limit:
   }
   return proxyQgis(req, res, 'WFS');
 });
+app.use('/local-tiles', express.static(localTilesDir, {
+  fallthrough: true,
+  immutable: true,
+  maxAge: '1d'
+}));
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 app.use((_req, res) => res.status(404).json({ error: 'Not found' }));

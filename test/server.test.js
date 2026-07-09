@@ -17,6 +17,7 @@ test('serves config, frontend and GeoJSON', async (t) => {
   assert.equal(config.dataEpsg, 'EPSG:32653');
   assert.equal(config.zoom, 12);
   assert.equal(config.qgisWmsUrl, '/qgis/wms');
+  assert.equal(config.localTilesUrl, '/local-tiles/{z}/{x}/{y}.png');
   assert.equal(config.wmsLayers.yandexRoads, 'Yandex_Roads');
   assert.equal(config.wmsLayers.googleSatellite, 'G_Sat');
   assert.equal(config.wmsLayers.polygon90273, 'polygon_90273');
@@ -32,6 +33,7 @@ test('serves config, frontend and GeoJSON', async (t) => {
   assert.match(html, /id="admin-login-backdrop"/);
   assert.match(html, /id="map-styles-button"/);
   assert.match(html, /id="map-styles-backdrop"/);
+  assert.match(html, /id="toggle-local-island-tiles"/);
   assert.match(html, /id="zone-card-backdrop"/);
   assert.match(html, /href="\/favicon\.svg"/);
   assert.match(html, /src="\/vacation-beach-icon\.svg"/);

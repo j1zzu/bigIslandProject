@@ -37,14 +37,23 @@
   });
   map.attributionControl.setPrefix('');
   const mapContainer = map.getContainer();
+  map.createPane('localTilesPane');
+  map.getPane('localTilesPane').style.zIndex = 350;
+  map.getPane('localTilesPane').style.pointerEvents = 'none';
   const mapStyleClasses = ['map-style-default','map-style-light','map-style-muted','map-style-night','map-style-nature','map-style-contrast','map-style-minimal','map-style-amur-mist','map-style-emerald-island'];
   const savedMapStyle = localStorage.getItem('bigIslandMapStyle') || 'default';
   const cursorIndicator = document.createElement('div');
   cursorIndicator.className = 'map-cursor-indicator';
   mapContainer.appendChild(cursorIndicator);
-  map.on('dragend zoomend moveend', () => {
-    map.panInsideBounds(islandBounds, { animate: true });
-  });
+  let boundsFrame;
+  function keepMapInsideBounds() {
+    if (boundsFrame) return;
+    boundsFrame = window.requestAnimationFrame(() => {
+      boundsFrame = null;
+      map.panInsideBounds(islandBounds, { animate: false });
+    });
+  }
+  map.on('dragend zoomend', keepMapInsideBounds);
   L.control.zoom({ position: 'bottomleft', zoomInTitle: 'Приблизить', zoomOutTitle: 'Отдалить' }).addTo(map);
   const layers = {};
   let coordinateFrame;
@@ -148,6 +157,17 @@
     maxNativeZoom: 19,
     maxZoom: 22,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+  }).addTo(map);
+  layers.localIslandTiles = L.tileLayer(config.localTilesUrl, {
+    pane:'localTilesPane',
+    minZoom:12,
+    maxZoom:22,
+    minNativeZoom:13,
+    maxNativeZoom:18,
+    opacity:1,
+    noWrap:true,
+    keepBuffer:3,
+    className:'local-island-tile'
   }).addTo(map);
   layers.basemap.once('load', hideMapLoader);
   window.setTimeout(hideMapLoader, 5000);
@@ -308,14 +328,16 @@
         const layer = loader ? await loader() : layers[key];
         if (event.target.checked) {
           const group = event.target.dataset.exclusiveGroup;
-          toggleRegistry.forEach((item) => {
-            if (item.input !== event.target && item.input.dataset.exclusiveGroup === group) {
-              item.input.checked = false;
-              item.option.classList.remove('active');
-              const otherLayer = layers[item.key];
-              if (otherLayer && map.hasLayer(otherLayer)) map.removeLayer(otherLayer);
-            }
-          });
+          if (group) {
+            toggleRegistry.forEach((item) => {
+              if (item.input !== event.target && item.input.dataset.exclusiveGroup === group) {
+                item.input.checked = false;
+                item.option.classList.remove('active');
+                const otherLayer = layers[item.key];
+                if (otherLayer && map.hasLayer(otherLayer)) map.removeLayer(otherLayer);
+              }
+            });
+          }
           layer.addTo(map);
         }
         else {
@@ -338,6 +360,7 @@
   bindToggle('#toggle-qgis-osm', 'qgisOsm');
   bindToggle('#toggle-google-satellite', 'googleSatellite');
   bindToggle('#toggle-esri', 'esri');
+  bindToggle('#toggle-local-island-tiles', 'localIslandTiles');
   bindToggle('#toggle-polygon-90273', 'polygon90273', loadPolygon90273);
   ui.stylesButton.addEventListener('click', showStylesModal);
   ui.stylesClose.addEventListener('click', hideStylesModal);

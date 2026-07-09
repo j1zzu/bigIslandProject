@@ -34,7 +34,7 @@
         <div class="layers-content-inner">
         <div class="layer-groups">
         <section class="layer-group expanded">
-          <button class="layer-group-toggle" type="button" aria-expanded="true"><span class="layer-group-icon-wrap" aria-hidden="true"><svg class="layer-group-icon" viewBox="0 0 24 24"><path d="M4 6.5 9 4l6 2.5 5-2.5v13.5l-5 2.5-6-2.5-5 2.5V6.5Z"/><path d="M9 4v13.5M15 6.5V20"/></svg></span><span><strong>Карты</strong><small>9 картографических слоёв</small></span><i aria-hidden="true"></i></button>
+          <button class="layer-group-toggle" type="button" aria-expanded="true"><span class="layer-group-icon-wrap" aria-hidden="true"><svg class="layer-group-icon" viewBox="0 0 24 24"><path d="M4 6.5 9 4l6 2.5 5-2.5v13.5l-5 2.5-6-2.5-5 2.5V6.5Z"/><path d="M9 4v13.5M15 6.5V20"/></svg></span><span><strong>Карты</strong><small>10 картографических слоёв</small></span><i aria-hidden="true"></i></button>
           <div class="layer-group-content"><div class="layer-group-inner"><div class="layer-list">
           <label class="layer-option"><span class="layer-copy"><strong>OpenStreetMap</strong><small>Основная карта</small></span><input id="toggle-basemap" data-exclusive-group="maps" type="checkbox" checked><span class="switch" aria-hidden="true"></span></label>
           <label class="layer-option"><span class="layer-copy"><strong>Яндекс — дороги</strong><small>QGIS · Yandex_Roads</small></span><input id="toggle-yandex-roads" data-exclusive-group="maps" type="checkbox"><span class="switch" aria-hidden="true"></span></label>
@@ -45,6 +45,7 @@
           <label class="layer-option"><span class="layer-copy"><strong>OSM через QGIS</strong><small>QGIS · OSM</small></span><input id="toggle-qgis-osm" data-exclusive-group="maps" type="checkbox"><span class="switch" aria-hidden="true"></span></label>
           <label class="layer-option"><span class="layer-copy"><strong>Google — спутник</strong><small>QGIS · G_Sat</small></span><input id="toggle-google-satellite" data-exclusive-group="maps" type="checkbox"><span class="switch" aria-hidden="true"></span></label>
           <label class="layer-option"><span class="layer-copy"><strong>Esri</strong><small>QGIS · Esri</small></span><input id="toggle-esri" data-exclusive-group="maps" type="checkbox"><span class="switch" aria-hidden="true"></span></label>
+          <label class="layer-option"><span class="layer-copy"><strong>Тайлы острова</strong><small>Локально · C:\island_imgs\tile</small></span><input id="toggle-local-island-tiles" type="checkbox" checked><span class="switch" aria-hidden="true"></span></label>
           </div></div></div>
         </section>
         <section class="layer-group">
@@ -118,7 +119,7 @@
     <div id="zone-card-backdrop" class="zone-card-backdrop" aria-hidden="true">
       <section class="zone-card" role="dialog" aria-modal="true" aria-labelledby="zone-card-title">
         <div class="zone-card-header">
-          <div><span class="zone-card-kicker">POLYGON 90273 · СЕМАНТИКА</span><h2 id="zone-card-title">Информация о зоне</h2></div>
+          <div><h2 id="zone-card-title">Информация о зоне</h2></div>
           <button id="close-zone-card" class="zone-card-close" type="button" aria-label="Закрыть карточку"></button>
         </div>
         <div class="zone-card-table-wrap">
