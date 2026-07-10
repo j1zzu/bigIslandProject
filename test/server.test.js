@@ -35,7 +35,8 @@ test('serves config, frontend and GeoJSON', async (t) => {
   assert.match(html, /id="map-styles-backdrop"/);
   assert.match(html, /id="toggle-local-island-tiles"/);
   assert.match(html, /id="zone-card-backdrop"/);
-  assert.match(html, /href="\/favicon\.svg"/);
+  assert.match(html, /href="\/vacation-beach-icon\.svg"/);
+  assert.match(html, /id="admin-editor-button"/);
   assert.match(html, /src="\/vacation-beach-icon\.svg"/);
 
   const favicon = await fetch(`${base}/favicon.svg`);

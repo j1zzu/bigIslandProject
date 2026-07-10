@@ -15,6 +15,7 @@
     adminForm:document.querySelector('#admin-login-form'), adminName:document.querySelector('#admin-name'),
     adminPassword:document.querySelector('#admin-password'), adminStatus:document.querySelector('#admin-login-status'),
     adminDropdown:document.querySelector('#admin-dropdown'), adminLogout:document.querySelector('#admin-logout-button'),
+    adminEditor:document.querySelector('#admin-editor-button'),
     stylesButton:document.querySelector('#map-styles-button'), stylesBackdrop:document.querySelector('#map-styles-backdrop'),
     stylesClose:document.querySelector('#close-map-styles')
   };
@@ -93,6 +94,27 @@
     updateAdminUi();
   }
 
+  function closeAdminDropdown() {
+    ui.adminDropdown.classList.remove('is-visible');
+    ui.adminDropdown.setAttribute('aria-hidden', 'true');
+  }
+
+  function openAdminEditor() {
+    closeAdminDropdown();
+    const polygonToggle = document.querySelector('#toggle-polygon-90273');
+    const zonesGroup = polygonToggle?.closest('.layer-group');
+    const zonesGroupButton = zonesGroup?.querySelector('.layer-group-toggle');
+    if (zonesGroup && zonesGroupButton && !zonesGroup.classList.contains('expanded')) {
+      zonesGroup.classList.add('expanded');
+      zonesGroupButton.setAttribute('aria-expanded', 'true');
+    }
+    if (polygonToggle && !polygonToggle.checked) {
+      polygonToggle.checked = true;
+      polygonToggle.dispatchEvent(new Event('change', { bubbles:true }));
+    }
+    ui.message.textContent = 'Редактор открыт: выберите зону на карте, чтобы изменить её данные.';
+  }
+
   function showAdminModal() {
     ui.adminStatus.textContent = isAdmin ? 'Вы уже вошли как администратор.' : '';
     ui.adminStatus.className = 'admin-login-status';
@@ -158,7 +180,72 @@
     maxZoom: 22,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
   }).addTo(map);
-  layers.localIslandTiles = L.tileLayer(config.localTilesUrl, {
+  const localTileBounds = {
+    13:{minX:7161,maxX:7171,minY:2831,maxY:2840},
+    14:{minX:14323,maxX:14342,minY:5662,maxY:5680},
+    15:{minX:28646,maxX:28685,minY:11324,maxY:11360},
+    16:{minX:57292,maxX:57371,minY:22648,maxY:22721},
+    17:{minX:114584,maxX:114743,minY:45296,maxY:45442},
+    18:{minX:229169,maxX:229486,minY:90593,maxY:90884}
+  };
+  const FeatheredTileLayer = L.TileLayer.extend({
+    createTile(coords, done) {
+      const bounds = localTileBounds[coords.z];
+      const edges = bounds ? {
+        left:coords.x === bounds.minX,
+        right:coords.x === bounds.maxX,
+        top:coords.y === bounds.minY,
+        bottom:coords.y === bounds.maxY
+      } : {};
+      const needsFeather = edges.left || edges.right || edges.top || edges.bottom;
+      if (!needsFeather) return L.TileLayer.prototype.createTile.call(this, coords, done);
+      const canvas = document.createElement('canvas');
+      const size = this.getTileSize();
+      canvas.width = size.x;
+      canvas.height = size.y;
+      const image = document.createElement('img');
+      image.alt = '';
+      image.onload = () => {
+        const context = canvas.getContext('2d');
+        context.drawImage(image, 0, 0, size.x, size.y);
+        context.globalCompositeOperation = 'destination-in';
+        const feather = Math.min(54, Math.round(size.x * 0.22));
+        const applyMask = (gradient) => {
+          context.fillStyle = gradient;
+          context.fillRect(0, 0, size.x, size.y);
+        };
+        if (edges.left) {
+          const gradient = context.createLinearGradient(0, 0, feather, 0);
+          gradient.addColorStop(0, 'rgba(0,0,0,0)');
+          gradient.addColorStop(1, 'rgba(0,0,0,1)');
+          applyMask(gradient);
+        }
+        if (edges.right) {
+          const gradient = context.createLinearGradient(size.x, 0, size.x - feather, 0);
+          gradient.addColorStop(0, 'rgba(0,0,0,0)');
+          gradient.addColorStop(1, 'rgba(0,0,0,1)');
+          applyMask(gradient);
+        }
+        if (edges.top) {
+          const gradient = context.createLinearGradient(0, 0, 0, feather);
+          gradient.addColorStop(0, 'rgba(0,0,0,0)');
+          gradient.addColorStop(1, 'rgba(0,0,0,1)');
+          applyMask(gradient);
+        }
+        if (edges.bottom) {
+          const gradient = context.createLinearGradient(0, size.y, 0, size.y - feather);
+          gradient.addColorStop(0, 'rgba(0,0,0,0)');
+          gradient.addColorStop(1, 'rgba(0,0,0,1)');
+          applyMask(gradient);
+        }
+        done(null, canvas);
+      };
+      image.onerror = () => done(new Error('Не удалось загрузить локальный тайл острова'), canvas);
+      image.src = this.getTileUrl(coords);
+      return canvas;
+    }
+  });
+  layers.localIslandTiles = new FeatheredTileLayer(config.localTilesUrl, {
     pane:'localTilesPane',
     minZoom:12,
     maxZoom:22,
@@ -378,11 +465,11 @@
     if (isAdmin) toggleAdminDropdown();
     else showAdminModal();
   });
+  ui.adminEditor.addEventListener('click', openAdminEditor);
   ui.adminLogout.addEventListener('click', logoutAdmin);
   document.addEventListener('click', (event) => {
     if (!event.target.closest('.admin-menu-wrap')) {
-      ui.adminDropdown.classList.remove('is-visible');
-      ui.adminDropdown.setAttribute('aria-hidden', 'true');
+      closeAdminDropdown();
     }
   });
   document.querySelector('#close-admin-login').addEventListener('click', hideAdminModal);
