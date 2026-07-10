@@ -17,7 +17,25 @@
     adminDropdown:document.querySelector('#admin-dropdown'), adminLogout:document.querySelector('#admin-logout-button'),
     adminEditor:document.querySelector('#admin-editor-button'),
     stylesButton:document.querySelector('#map-styles-button'), stylesBackdrop:document.querySelector('#map-styles-backdrop'),
-    stylesClose:document.querySelector('#close-map-styles')
+    stylesClose:document.querySelector('#close-map-styles'),
+    createLayerButton:document.querySelector('#create-layer-button'), createLayerBackdrop:document.querySelector('#create-layer-backdrop'),
+    createLayerForm:document.querySelector('#create-layer-form'), createLayerClose:document.querySelector('#close-create-layer'),
+    createLayerCancel:document.querySelector('#cancel-create-layer'), createLayerSubmit:document.querySelector('#submit-create-layer'),
+    createLayerStatus:document.querySelector('#create-layer-status'),
+    mapsLayerList:document.querySelector('#maps-layer-list'), zonesLayerList:document.querySelector('#zones-layer-list'),
+    customProvider:document.querySelector('#custom-layer-provider'), customName:document.querySelector('#custom-layer-name'),
+    customGroup:document.querySelector('#custom-layer-group'), customType:document.querySelector('#custom-layer-type'), customUrl:document.querySelector('#custom-layer-url'),
+    customMinZoom:document.querySelector('#custom-layer-minzoom'), customMaxZoom:document.querySelector('#custom-layer-maxzoom'),
+    customAttribution:document.querySelector('#custom-layer-attribution'), customWmsFields:document.querySelector('#custom-layer-wms-fields'),
+    customWmsLayers:document.querySelector('#custom-layer-wms-layers'), customWmsStyles:document.querySelector('#custom-layer-wms-styles'),
+    customWmsFormat:document.querySelector('#custom-layer-wms-format'), customWmsVersion:document.querySelector('#custom-layer-wms-version'),
+    customTransparent:document.querySelector('#custom-layer-transparent'),
+    editorBackdrop:document.querySelector('#editor-backdrop'), editorClose:document.querySelector('#close-editor'),
+    editorTitle:document.querySelector('#editor-title'), editorDescription:document.querySelector('#editor-description'),
+    editorModeView:document.querySelector('#editor-mode-view'), zoneEditorView:document.querySelector('#zone-editor-view'),
+    layerEditorView:document.querySelector('#layer-editor-view'), layerEditorList:document.querySelector('#layer-editor-list'),
+    openZoneEditor:document.querySelector('#open-zone-editor'), openLayerEditor:document.querySelector('#open-layer-editor'),
+    backFromZoneEditor:document.querySelector('#back-from-zone-editor'), backFromLayerEditor:document.querySelector('#back-from-layer-editor')
   };
   let adminToken = sessionStorage.getItem('bigIslandAdminToken') || '';
   let adminDisplayName = sessionStorage.getItem('bigIslandAdminName') || '';
@@ -38,11 +56,18 @@
   });
   map.attributionControl.setPrefix('');
   const mapContainer = map.getContainer();
-  map.createPane('localTilesPane');
-  map.getPane('localTilesPane').style.zIndex = 350;
-  map.getPane('localTilesPane').style.pointerEvents = 'none';
-  const mapStyleClasses = ['map-style-default','map-style-light','map-style-muted','map-style-night','map-style-nature','map-style-contrast','map-style-minimal','map-style-amur-mist','map-style-emerald-island'];
-  const savedMapStyle = localStorage.getItem('bigIslandMapStyle') || 'default';
+  map.createPane('baseMapsPane');
+  map.createPane('islandTilesPane');
+  map.createPane('zonesPane');
+  map.getPane('baseMapsPane').style.zIndex = 200;
+  map.getPane('islandTilesPane').style.zIndex = 450;
+  map.getPane('zonesPane').style.zIndex = 850;
+  map.getPane('baseMapsPane').style.pointerEvents = 'none';
+  map.getPane('islandTilesPane').style.pointerEvents = 'none';
+  map.getPane('zonesPane').style.pointerEvents = 'auto';
+  const zonesRenderer = L.svg({ pane:'zonesPane' });
+  const mapStyleClasses = ['map-style-default','map-style-light','map-style-muted','map-style-nature','map-style-contrast','map-style-minimal','map-style-amur-mist','map-style-emerald-island'];
+  const savedMapStyle = localStorage.getItem('bigIslandMapStyle') === 'night' ? 'default' : (localStorage.getItem('bigIslandMapStyle') || 'default');
   const cursorIndicator = document.createElement('div');
   cursorIndicator.className = 'map-cursor-indicator';
   mapContainer.appendChild(cursorIndicator);
@@ -55,12 +80,15 @@
     });
   }
   map.on('dragend zoomend', keepMapInsideBounds);
-  L.control.zoom({ position: 'bottomleft', zoomInTitle: 'Приблизить', zoomOutTitle: 'Отдалить' }).addTo(map);
+  L.control.zoom({ position: 'bottomright', zoomInTitle: 'Приблизить', zoomOutTitle: 'Отдалить' }).addTo(map);
   const layers = {};
+  const customLayers = [];
+  const CUSTOM_LAYERS_KEY = 'customMapLayers';
   let coordinateFrame;
   let coordinateFadeTimer;
   let loaderHidden = false;
   let activeZoneFeature;
+  let editingCustomLayerId = '';
 
   function updateAdminUi() {
     ui.adminButton.classList.toggle('is-admin', isAdmin);
@@ -71,6 +99,9 @@
       ui.adminDropdown.classList.remove('is-visible');
       ui.adminDropdown.setAttribute('aria-hidden', 'true');
     }
+    ui.createLayerButton.hidden = !isAdmin;
+    ui.adminEditor.hidden = !isAdmin;
+    renderCustomLayers();
     if (ui.zoneCard.classList.contains('is-visible') && activeZoneFeature) showZoneCard(activeZoneFeature);
   }
 
@@ -101,18 +132,7 @@
 
   function openAdminEditor() {
     closeAdminDropdown();
-    const polygonToggle = document.querySelector('#toggle-polygon-90273');
-    const zonesGroup = polygonToggle?.closest('.layer-group');
-    const zonesGroupButton = zonesGroup?.querySelector('.layer-group-toggle');
-    if (zonesGroup && zonesGroupButton && !zonesGroup.classList.contains('expanded')) {
-      zonesGroup.classList.add('expanded');
-      zonesGroupButton.setAttribute('aria-expanded', 'true');
-    }
-    if (polygonToggle && !polygonToggle.checked) {
-      polygonToggle.checked = true;
-      polygonToggle.dispatchEvent(new Event('change', { bubbles:true }));
-    }
-    ui.message.textContent = 'Редактор открыт: выберите зону на карте, чтобы изменить её данные.';
+    showEditorModal();
   }
 
   function showAdminModal() {
@@ -137,7 +157,7 @@
   }
 
   function applyMapStyle(styleName) {
-    const safeStyle = ['default','light','muted','night','nature','contrast','minimal','amur-mist','emerald-island'].includes(styleName) ? styleName : 'default';
+    const safeStyle = ['default','light','muted','nature','contrast','minimal','amur-mist','emerald-island'].includes(styleName) ? styleName : 'default';
     mapContainer.classList.remove(...mapStyleClasses);
     mapContainer.classList.add(`map-style-${safeStyle}`);
     localStorage.setItem('bigIslandMapStyle', safeStyle);
@@ -176,6 +196,7 @@
   }
 
   layers.basemap = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    pane:'baseMapsPane',
     maxNativeZoom: 19,
     maxZoom: 22,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -246,7 +267,7 @@
     }
   });
   layers.localIslandTiles = new FeatheredTileLayer(config.localTilesUrl, {
-    pane:'localTilesPane',
+    pane:'islandTilesPane',
     minZoom:12,
     maxZoom:22,
     minNativeZoom:13,
@@ -262,7 +283,7 @@
   function createWmsLayer(layerName) {
     return L.tileLayer.wms(config.qgisWmsUrl, {
       layers: layerName, format: 'image/png', transparent: true, version: '1.3.0',
-      crs: L.CRS.EPSG3857, tiled: true, maxZoom: 22, attribution: 'QGIS Server'
+      crs: L.CRS.EPSG3857, tiled: true, maxZoom: 22, attribution: 'QGIS Server', pane:'baseMapsPane'
     });
   }
   layers.yandexRoads = createWmsLayer(config.wmsLayers.yandexRoads);
@@ -286,6 +307,384 @@
   const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
     '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
   }[char]));
+
+  const providerPresets = {
+    custom:{ type:'xyz', url:'', minZoom:12, maxZoom:22, attribution:'' },
+    osm:{ type:'xyz', url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png', minZoom:0, maxZoom:22, attribution:'© OpenStreetMap' },
+    'local-xyz':{ type:'xyz', url:'/local-tiles/{z}/{x}/{y}.png', minZoom:12, maxZoom:22, attribution:'Локальные тайлы' },
+    'local-wms':{ type:'wms', url:config.qgisWmsUrl, minZoom:12, maxZoom:22, attribution:'QGIS Server', wmsLayers:'', wmsStyles:'', wmsFormat:'image/png', wmsVersion:'1.3.0', wmsTransparent:true },
+    'google-roads':{ type:'xyz', url:'https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', minZoom:0, maxZoom:22, attribution:'Google', subdomains:'0123' },
+    'google-satellite':{ type:'xyz', url:'https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', minZoom:0, maxZoom:22, attribution:'Google', subdomains:'0123' },
+    'yandex-custom':{ type:'xyz', url:'', minZoom:0, maxZoom:22, attribution:'Yandex' }
+  };
+
+  function showCreateLayerModal(layerId = '') {
+    if (!isAdmin) {
+      ui.message.textContent = 'Создание и редактирование пользовательских слоёв доступно только администратору.';
+      showAdminModal();
+      return;
+    }
+    editingCustomLayerId = layerId;
+    const layerConfig = layerId ? customLayers.find((item) => item.id === layerId) : null;
+    document.querySelector('#create-layer-title').textContent = layerConfig ? 'Редактировать слой' : 'Создать слой';
+    document.querySelector('.create-layer-header p').textContent = layerConfig ? 'Измените параметры слоя. После сохранения слой будет пересоздан на карте.' : 'Добавьте внешний или локальный слой по URL. Поддерживаются XYZ, TMS и WMS.';
+    ui.createLayerSubmit.textContent = layerConfig ? 'Сохранить слой' : 'Добавить слой';
+    if (layerConfig) fillCustomLayerForm(layerConfig);
+    else {
+      ui.createLayerForm.reset();
+      applyProviderPreset('custom');
+    }
+    ui.createLayerStatus.textContent = '';
+    ui.createLayerStatus.className = 'create-layer-status';
+    updateCreateLayerSubmitState();
+    ui.createLayerBackdrop.classList.add('is-visible');
+    ui.createLayerBackdrop.setAttribute('aria-hidden', 'false');
+    window.setTimeout(() => ui.customName.focus(), 80);
+  }
+
+  function hideCreateLayerModal() {
+    ui.createLayerBackdrop.classList.remove('is-visible');
+    ui.createLayerBackdrop.setAttribute('aria-hidden', 'true');
+    editingCustomLayerId = '';
+  }
+
+  function updateWmsFieldsVisibility() {
+    const isWms = ui.customType.value === 'wms';
+    ui.customWmsFields.hidden = !isWms;
+    ui.customUrl.placeholder = isWms ? 'https://server/qgis_mapserv.fcgi.exe?...' : 'https://server/tiles/{z}/{x}/{y}.png';
+    updateCreateLayerSubmitState();
+  }
+
+  function applyProviderPreset(providerKey) {
+    const preset = providerPresets[providerKey] || providerPresets.custom;
+    ui.customType.value = preset.type;
+    ui.customUrl.value = preset.url || '';
+    ui.customMinZoom.value = preset.minZoom;
+    ui.customMaxZoom.value = preset.maxZoom;
+    ui.customAttribution.value = preset.attribution || '';
+    ui.customWmsLayers.value = preset.wmsLayers || '';
+    ui.customWmsStyles.value = preset.wmsStyles || '';
+    ui.customWmsFormat.value = preset.wmsFormat || 'image/png';
+    ui.customWmsVersion.value = preset.wmsVersion || '1.3.0';
+    ui.customTransparent.checked = preset.wmsTransparent !== false;
+    updateWmsFieldsVisibility();
+  }
+
+  function fillCustomLayerForm(layerConfig) {
+    ui.customName.value = layerConfig.name || '';
+    ui.customGroup.value = layerConfig.group || 'maps';
+    ui.customProvider.value = layerConfig.provider || 'custom';
+    ui.customType.value = layerConfig.type || 'xyz';
+    ui.customUrl.value = layerConfig.url || '';
+    ui.customMinZoom.value = Number.isFinite(Number(layerConfig.minZoom)) ? layerConfig.minZoom : 12;
+    ui.customMaxZoom.value = Number.isFinite(Number(layerConfig.maxZoom)) ? layerConfig.maxZoom : 22;
+    ui.customAttribution.value = layerConfig.attribution || '';
+    ui.customWmsLayers.value = layerConfig.wmsLayers || '';
+    ui.customWmsStyles.value = layerConfig.wmsStyles || '';
+    ui.customWmsFormat.value = layerConfig.wmsFormat || 'image/png';
+    ui.customWmsVersion.value = layerConfig.wmsVersion || '1.3.0';
+    ui.customTransparent.checked = layerConfig.wmsTransparent !== false;
+    updateWmsFieldsVisibility();
+  }
+
+  function updateCreateLayerSubmitState() {
+    if (!ui.createLayerSubmit) return;
+    ui.createLayerSubmit.disabled = validateCustomLayerConfig(readCustomLayerForm(), { allowSameId:editingCustomLayerId }).length > 0;
+  }
+
+  function readCustomLayerForm() {
+    const preset = providerPresets[ui.customProvider.value] || {};
+    return {
+      id: editingCustomLayerId || `custom-layer-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name: ui.customName.value.trim(),
+      group: ui.customGroup.value,
+      provider: ui.customProvider.value,
+      type: ui.customType.value,
+      url: ui.customUrl.value.trim(),
+      minZoom: Number(ui.customMinZoom.value),
+      maxZoom: Number(ui.customMaxZoom.value),
+      attribution: ui.customAttribution.value.trim(),
+      subdomains: preset.subdomains || undefined,
+      wmsLayers: ui.customWmsLayers.value.trim(),
+      wmsStyles: ui.customWmsStyles.value.trim(),
+      wmsFormat: ui.customWmsFormat.value.trim() || 'image/png',
+      wmsVersion: ui.customWmsVersion.value.trim() || '1.3.0',
+      wmsTransparent: ui.customTransparent.checked,
+      enabled: false
+    };
+  }
+
+  function validateCustomLayerConfig(layerConfig, { allowSameId = '' } = {}) {
+    const errors = [];
+    const name = String(layerConfig.name || '').trim();
+    const url = String(layerConfig.url || '').trim();
+    if (!name) errors.push('Укажите название слоя.');
+    if (name.length > 60) errors.push('Название слоя должно быть не длиннее 60 символов.');
+    if (customLayers.some((item) => item.id !== allowSameId && item.name.toLowerCase() === name.toLowerCase())) errors.push('Слой с таким названием уже есть.');
+    if (!['maps','zones'].includes(layerConfig.group || 'maps')) errors.push('Выберите группу слоя: Карты или Зоны.');
+    if (!['xyz','tms','wms'].includes(layerConfig.type)) errors.push('Выберите тип слоя: XYZ, TMS или WMS.');
+    if (!url || !/^(https?:\/\/|\/)/i.test(url)) errors.push('URL должен начинаться с http://, https:// или /.');
+    if (['xyz','tms'].includes(layerConfig.type) && !(/\{x\}/i.test(url) && /\{y\}/i.test(url) && /\{z\}/i.test(url))) errors.push('Для XYZ/TMS URL должен содержать {x}, {y} и {z}.');
+    if (layerConfig.type === 'wms' && !String(layerConfig.wmsLayers || '').trim()) errors.push('Для WMS укажите поле layers.');
+    if (!Number.isFinite(layerConfig.minZoom) || !Number.isFinite(layerConfig.maxZoom)) errors.push('Масштабы должны быть числами.');
+    if (layerConfig.minZoom < 0 || layerConfig.maxZoom > 22 || layerConfig.minZoom > layerConfig.maxZoom) errors.push('Масштаб должен быть от 0 до 22, а минимум не больше максимума.');
+    return errors;
+  }
+
+  function warnCustomLayerTileError(item, event) {
+    console.warn(`Не удалось загрузить тайл пользовательского слоя "${item.name}"`, event);
+    if (item.tileErrorNotified) return;
+    item.tileErrorNotified = true;
+    ui.message.textContent = `Не удалось загрузить часть тайлов слоя «${item.name}». Проверьте URL или доступность сервера.`;
+    window.setTimeout(() => {
+      if (ui.message.textContent.includes(item.name)) ui.message.textContent = '';
+    }, 5000);
+  }
+
+  function createCustomLeafletLayer(layerConfig) {
+    const commonOptions = {
+      pane:layerConfig.pane || getLayerPane(layerConfig),
+      minZoom: layerConfig.minZoom,
+      maxZoom: layerConfig.maxZoom,
+      attribution: layerConfig.attribution || undefined,
+      subdomains: layerConfig.subdomains || 'abc'
+    };
+    if (layerConfig.type === 'wms') {
+      return L.tileLayer.wms(layerConfig.url, {
+        ...commonOptions,
+        layers: layerConfig.wmsLayers,
+        styles: layerConfig.wmsStyles || '',
+        format: layerConfig.wmsFormat || 'image/png',
+        transparent: layerConfig.wmsTransparent !== false,
+        version: layerConfig.wmsVersion || '1.3.0',
+        tiled: true
+      });
+    }
+    return L.tileLayer(layerConfig.url, {
+      ...commonOptions,
+      tms: layerConfig.type === 'tms',
+      maxNativeZoom: layerConfig.maxZoom,
+      keepBuffer: 2
+    });
+  }
+
+  function getLayerPane(layerConfig) {
+    if (layerConfig.id === 'localIslandTiles' || layerConfig.name === 'Тайлы острова') return 'islandTilesPane';
+    return (layerConfig.group || 'maps') === 'zones' ? 'zonesPane' : 'baseMapsPane';
+  }
+
+  function persistCustomLayers() {
+    const data = customLayers.map(({ leafletLayer, tileErrorNotified, ...stored }) => stored);
+    localStorage.setItem(CUSTOM_LAYERS_KEY, JSON.stringify(data));
+  }
+
+  function renderCustomLayers() {
+    document.querySelectorAll('.custom-layer-option').forEach((node) => node.remove());
+    customLayers.forEach((item) => {
+      const targetList = (item.group || 'maps') === 'zones' ? ui.zonesLayerList : ui.mapsLayerList;
+      const row = document.createElement('label');
+      row.className = `layer-option custom-layer-option ${item.enabled ? 'active' : ''}`;
+      row.dataset.customLayerId = item.id;
+      row.innerHTML = `<span class="layer-copy"><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.type.toUpperCase())} · ${escapeHtml(item.url)}</small></span><input data-custom-layer-toggle="${escapeHtml(item.id)}" data-exclusive-group="${escapeHtml(item.group || 'maps')}" type="checkbox" ${item.enabled ? 'checked' : ''}><span class="switch" aria-hidden="true"></span>`;
+      targetList.appendChild(row);
+    });
+    renderLayerEditorList();
+  }
+
+  function addCustomLayer(layerConfig, { persist = true } = {}) {
+    const normalized = {
+      ...layerConfig,
+      id: layerConfig.id || `custom-layer-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name: String(layerConfig.name || '').trim(),
+      group: ['maps','zones'].includes(layerConfig.group) ? layerConfig.group : 'maps',
+      type: String(layerConfig.type || 'xyz').toLowerCase(),
+      url: String(layerConfig.url || '').trim(),
+      minZoom: Number(layerConfig.minZoom),
+      maxZoom: Number(layerConfig.maxZoom),
+      editable: layerConfig.editable !== false,
+      deletable: layerConfig.deletable !== false,
+      pane: layerConfig.pane || getLayerPane(layerConfig),
+      enabled: layerConfig.enabled !== false
+    };
+    const errors = validateCustomLayerConfig(normalized, { allowSameId: normalized.id });
+    if (errors.length) throw new Error(errors[0]);
+    const item = { ...normalized };
+    item.leafletLayer = createCustomLeafletLayer(item);
+    item.leafletLayer.on('tileerror', (event) => warnCustomLayerTileError(item, event));
+    customLayers.push(item);
+    if (item.enabled) item.leafletLayer.addTo(map);
+    renderCustomLayers();
+    if (persist) persistCustomLayers();
+    return item;
+  }
+
+  function loadCustomLayers() {
+    let stored = [];
+    try {
+      stored = JSON.parse(localStorage.getItem(CUSTOM_LAYERS_KEY) || '[]');
+    } catch (error) {
+      console.warn('Не удалось прочитать пользовательские слои из localStorage', error);
+    }
+    if (!Array.isArray(stored)) return;
+    stored.forEach((layerConfig) => {
+      try {
+        addCustomLayer(layerConfig, { persist:false });
+      } catch (error) {
+        console.warn('Пользовательский слой пропущен:', error.message, layerConfig);
+      }
+    });
+    renderCustomLayers();
+  }
+
+  function setCustomLayerVisibility(id, visible) {
+    const item = customLayers.find((layerItem) => layerItem.id === id);
+    if (!item) return;
+    if (visible) deactivateExclusiveLayers(item.group || 'maps', id);
+    item.enabled = visible;
+    if (visible) item.leafletLayer.addTo(map);
+    else map.removeLayer(item.leafletLayer);
+    persistCustomLayers();
+    renderCustomLayers();
+  }
+
+  function deleteCustomLayer(id) {
+    if (!isAdmin) {
+      ui.message.textContent = 'Удалять пользовательские слои может только администратор.';
+      showAdminModal();
+      return;
+    }
+    const index = customLayers.findIndex((item) => item.id === id);
+    if (index === -1) return;
+    const [item] = customLayers.splice(index, 1);
+    if (map.hasLayer(item.leafletLayer)) map.removeLayer(item.leafletLayer);
+    persistCustomLayers();
+    renderCustomLayers();
+  }
+
+  function renderLayerEditorList() {
+    if (!ui.layerEditorList) return;
+    if (!customLayers.length) {
+      ui.layerEditorList.innerHTML = '<p class="editor-empty">Созданных администратором слоёв пока нет.</p>';
+      return;
+    }
+    const groups = [
+      ['maps', 'Карты'],
+      ['zones', 'Зоны']
+    ];
+    ui.layerEditorList.innerHTML = groups.map(([group, title]) => {
+      const groupLayers = customLayers.filter((item) => (item.group || 'maps') === group);
+      if (!groupLayers.length) return '';
+      return `<section class="layer-editor-group"><h3>${title}</h3>${groupLayers.map((item) => `
+        <article class="layer-editor-item">
+          <button class="layer-editor-select" type="button" data-custom-layer-edit="${escapeHtml(item.id)}">
+            <strong>${escapeHtml(item.name)}</strong>
+            <small>${escapeHtml(item.type.toUpperCase())} · ${escapeHtml(item.url)}</small>
+          </button>
+          <button class="layer-editor-delete" type="button" data-custom-layer-delete="${escapeHtml(item.id)}" aria-label="Удалить слой ${escapeHtml(item.name)}">Удалить</button>
+        </article>
+      `).join('')}</section>`;
+    }).join('') || '<p class="editor-empty">Созданных администратором слоёв пока нет.</p>';
+  }
+
+  function showEditorMode() {
+    ui.editorTitle.textContent = 'Редактор';
+    ui.editorDescription.textContent = 'Выберите режим редактирования.';
+    ui.editorModeView.hidden = false;
+    ui.zoneEditorView.hidden = true;
+    ui.layerEditorView.hidden = true;
+  }
+
+  function showZoneEditorPlaceholder() {
+    ui.editorTitle.textContent = 'Редактор зон';
+    ui.editorDescription.textContent = 'Раздел подготовлен для будущих функций редактирования зон.';
+    ui.editorModeView.hidden = true;
+    ui.zoneEditorView.hidden = false;
+    ui.layerEditorView.hidden = true;
+  }
+
+  function showLayerEditor() {
+    ui.editorTitle.textContent = 'Редактор слоёв';
+    ui.editorDescription.textContent = 'Выберите слой, чтобы изменить его параметры. Удаление доступно только в этом разделе.';
+    renderLayerEditorList();
+    ui.editorModeView.hidden = true;
+    ui.zoneEditorView.hidden = true;
+    ui.layerEditorView.hidden = false;
+  }
+
+  function showEditorModal() {
+    if (!isAdmin) {
+      ui.message.textContent = 'Редактор доступен только администратору.';
+      showAdminModal();
+      return;
+    }
+    showEditorMode();
+    ui.editorBackdrop.classList.add('is-visible');
+    ui.editorBackdrop.setAttribute('aria-hidden', 'false');
+    window.setTimeout(() => ui.editorClose.focus(), 80);
+  }
+
+  function hideEditorModal() {
+    ui.editorBackdrop.classList.remove('is-visible');
+    ui.editorBackdrop.setAttribute('aria-hidden', 'true');
+  }
+
+  function deactivateExclusiveLayers(group, exceptCustomId = '') {
+    toggleRegistry.forEach((item) => {
+      if (item.input.dataset.exclusiveGroup === group) {
+        item.input.checked = false;
+        item.option.classList.remove('active');
+        const otherLayer = layers[item.key];
+        if (otherLayer && map.hasLayer(otherLayer)) map.removeLayer(otherLayer);
+      }
+    });
+    customLayers.forEach((item) => {
+      if (item.id !== exceptCustomId && (item.group || 'maps') === group) {
+        item.enabled = false;
+        if (map.hasLayer(item.leafletLayer)) map.removeLayer(item.leafletLayer);
+      }
+    });
+  }
+
+  function updateCustomLayer(id, layerConfig) {
+    if (!isAdmin) {
+      ui.message.textContent = 'Редактировать пользовательские слои может только администратор.';
+      showAdminModal();
+      return;
+    }
+    const index = customLayers.findIndex((item) => item.id === id);
+    if (index === -1) throw new Error('Слой для редактирования не найден.');
+    const previous = customLayers[index];
+    const normalized = {
+      ...layerConfig,
+      id,
+      enabled: previous.enabled,
+      name: String(layerConfig.name || '').trim(),
+      group: ['maps','zones'].includes(layerConfig.group) ? layerConfig.group : 'maps',
+      type: String(layerConfig.type || 'xyz').toLowerCase(),
+      url: String(layerConfig.url || '').trim(),
+      minZoom: Number(layerConfig.minZoom),
+      maxZoom: Number(layerConfig.maxZoom),
+      editable: previous.editable !== false,
+      deletable: previous.deletable !== false,
+      pane: getLayerPane(layerConfig)
+    };
+    const errors = validateCustomLayerConfig(normalized, { allowSameId:id });
+    if (errors.length) throw new Error(errors[0]);
+    if (map.hasLayer(previous.leafletLayer)) map.removeLayer(previous.leafletLayer);
+    const next = { ...normalized };
+    next.leafletLayer = createCustomLeafletLayer(next);
+    next.leafletLayer.on('tileerror', (event) => warnCustomLayerTileError(next, event));
+    customLayers[index] = next;
+    if (next.enabled) {
+      deactivateExclusiveLayers(next.group || 'maps', next.id);
+      next.leafletLayer.addTo(map);
+    }
+    persistCustomLayers();
+    renderCustomLayers();
+    return next;
+  }
+
+  loadCustomLayers();
 
   function showZoneCard(feature) {
     const properties = feature.properties || {};
@@ -388,6 +787,8 @@
     const styles = new WeakMap();
     data.features.forEach((feature, index) => styles.set(feature, zoneStyle(index)));
     layers.polygon90273 = L.geoJSON(data, {
+      pane:'zonesPane',
+      renderer:zonesRenderer,
       style: (feature) => styles.get(feature),
       onEachFeature: (feature, layer) => {
         const baseStyle = styles.get(feature);
@@ -399,6 +800,7 @@
         layer.on('mouseout', () => layer.setStyle(baseStyle));
       }
     });
+    layers.polygon90273.on('add', () => layers.polygon90273.bringToFront());
     return layers.polygon90273;
   }
 
@@ -424,6 +826,14 @@
                 if (otherLayer && map.hasLayer(otherLayer)) map.removeLayer(otherLayer);
               }
             });
+            customLayers.forEach((item) => {
+              if ((item.group || 'maps') === group) {
+                item.enabled = false;
+                if (map.hasLayer(item.leafletLayer)) map.removeLayer(item.leafletLayer);
+              }
+            });
+            persistCustomLayers();
+            renderCustomLayers();
           }
           layer.addTo(map);
         }
@@ -449,6 +859,66 @@
   bindToggle('#toggle-esri', 'esri');
   bindToggle('#toggle-local-island-tiles', 'localIslandTiles');
   bindToggle('#toggle-polygon-90273', 'polygon90273', loadPolygon90273);
+  ui.createLayerButton.addEventListener('click', () => showCreateLayerModal());
+  ui.createLayerClose.addEventListener('click', hideCreateLayerModal);
+  ui.createLayerCancel.addEventListener('click', hideCreateLayerModal);
+  ui.createLayerBackdrop.addEventListener('click', (event) => {
+    if (event.target === ui.createLayerBackdrop) hideCreateLayerModal();
+  });
+  ui.customProvider.addEventListener('change', () => applyProviderPreset(ui.customProvider.value));
+  ui.customType.addEventListener('change', updateWmsFieldsVisibility);
+  ui.createLayerForm.addEventListener('input', () => {
+    ui.createLayerStatus.textContent = '';
+    ui.createLayerStatus.className = 'create-layer-status';
+    updateCreateLayerSubmitState();
+  });
+  ui.createLayerForm.addEventListener('change', updateCreateLayerSubmitState);
+  ui.createLayerForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    if (!isAdmin) {
+      ui.createLayerStatus.textContent = 'Создавать и редактировать слои может только администратор.';
+      ui.createLayerStatus.className = 'create-layer-status error';
+      showAdminModal();
+      return;
+    }
+    const layerConfig = readCustomLayerForm();
+    const errors = validateCustomLayerConfig(layerConfig, { allowSameId:editingCustomLayerId });
+    if (errors.length) {
+      ui.createLayerStatus.textContent = errors[0];
+      ui.createLayerStatus.className = 'create-layer-status error';
+      return;
+    }
+    try {
+      if (editingCustomLayerId) updateCustomLayer(editingCustomLayerId, layerConfig);
+      else addCustomLayer(layerConfig);
+      const actionText = editingCustomLayerId ? 'сохранён' : 'добавлен';
+      ui.createLayerForm.reset();
+      applyProviderPreset('custom');
+      ui.createLayerStatus.textContent = '';
+      hideCreateLayerModal();
+      ui.message.textContent = `Слой «${layerConfig.name}» ${actionText}.`;
+      window.setTimeout(() => {
+        if (ui.message.textContent.includes(layerConfig.name)) ui.message.textContent = '';
+      }, 3500);
+    } catch (error) {
+      ui.createLayerStatus.textContent = error.message;
+      ui.createLayerStatus.className = 'create-layer-status error';
+    }
+  });
+  document.addEventListener('change', (event) => {
+    const id = event.target.dataset.customLayerToggle;
+    if (id) setCustomLayerVisibility(id, event.target.checked);
+  });
+  ui.layerEditorList.addEventListener('click', (event) => {
+    const editButton = event.target.closest('[data-custom-layer-edit]');
+    if (editButton) {
+      hideEditorModal();
+      showCreateLayerModal(editButton.dataset.customLayerEdit);
+      return;
+    }
+    const button = event.target.closest('[data-custom-layer-delete]');
+    if (button) deleteCustomLayer(button.dataset.customLayerDelete);
+  });
   ui.stylesButton.addEventListener('click', showStylesModal);
   ui.stylesClose.addEventListener('click', hideStylesModal);
   ui.stylesBackdrop.addEventListener('click', (event) => {
@@ -467,6 +937,14 @@
   });
   ui.adminEditor.addEventListener('click', openAdminEditor);
   ui.adminLogout.addEventListener('click', logoutAdmin);
+  ui.editorClose.addEventListener('click', hideEditorModal);
+  ui.editorBackdrop.addEventListener('click', (event) => {
+    if (event.target === ui.editorBackdrop) hideEditorModal();
+  });
+  ui.openZoneEditor.addEventListener('click', showZoneEditorPlaceholder);
+  ui.openLayerEditor.addEventListener('click', showLayerEditor);
+  ui.backFromZoneEditor.addEventListener('click', showEditorMode);
+  ui.backFromLayerEditor.addEventListener('click', showEditorMode);
   document.addEventListener('click', (event) => {
     if (!event.target.closest('.admin-menu-wrap')) {
       closeAdminDropdown();
@@ -534,6 +1012,8 @@
     if (event.key === 'Escape' && ui.islandBackdrop.classList.contains('is-visible')) hideIslandInfo();
     if (event.key === 'Escape' && ui.adminBackdrop.classList.contains('is-visible')) hideAdminModal();
     if (event.key === 'Escape' && ui.stylesBackdrop.classList.contains('is-visible')) hideStylesModal();
+    if (event.key === 'Escape' && ui.createLayerBackdrop.classList.contains('is-visible')) hideCreateLayerModal();
+    if (event.key === 'Escape' && ui.editorBackdrop.classList.contains('is-visible')) hideEditorModal();
   });
   const layersPanel = document.querySelector('#layers-panel');
   const layersPanelButton = document.querySelector('#toggle-layers-panel');

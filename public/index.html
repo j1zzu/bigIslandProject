@@ -21,7 +21,6 @@
       <div class="admin-menu-wrap">
         <button id="admin-login-button" class="admin-login-button" type="button" aria-label="Вход"><i aria-hidden="true"></i><span>Вход</span></button>
         <div id="admin-dropdown" class="admin-dropdown" aria-hidden="true">
-          <button id="admin-editor-button" class="admin-editor-button" type="button">Редактор</button>
           <button id="admin-logout-button" class="admin-logout-button" type="button">Выйти</button>
         </div>
       </div>
@@ -36,7 +35,7 @@
         <div class="layer-groups">
         <section class="layer-group expanded">
           <button class="layer-group-toggle" type="button" aria-expanded="true"><span class="layer-group-icon-wrap" aria-hidden="true"><svg class="layer-group-icon" viewBox="0 0 24 24"><path d="M4 6.5 9 4l6 2.5 5-2.5v13.5l-5 2.5-6-2.5-5 2.5V6.5Z"/><path d="M9 4v13.5M15 6.5V20"/></svg></span><span><strong>Карты</strong><small>10 картографических слоёв</small></span><i aria-hidden="true"></i></button>
-          <div class="layer-group-content"><div class="layer-group-inner"><div class="layer-list">
+          <div class="layer-group-content"><div class="layer-group-inner"><div id="maps-layer-list" class="layer-list">
           <label class="layer-option"><span class="layer-copy"><strong>OpenStreetMap</strong><small>Основная карта</small></span><input id="toggle-basemap" data-exclusive-group="maps" type="checkbox" checked><span class="switch" aria-hidden="true"></span></label>
           <label class="layer-option"><span class="layer-copy"><strong>Яндекс — дороги</strong><small>QGIS · Yandex_Roads</small></span><input id="toggle-yandex-roads" data-exclusive-group="maps" type="checkbox"><span class="switch" aria-hidden="true"></span></label>
           <label class="layer-option"><span class="layer-copy"><strong>Ортофотоплан</strong><small>QGIS · Ortophoto</small></span><input id="toggle-ortophoto" data-exclusive-group="maps" type="checkbox"><span class="switch" aria-hidden="true"></span></label>
@@ -51,12 +50,14 @@
         </section>
         <section class="layer-group">
           <button class="layer-group-toggle" type="button" aria-expanded="false"><span class="layer-group-icon-wrap layer-group-icon-wrap--zones" aria-hidden="true"><svg class="layer-group-icon" viewBox="0 0 24 24"><path d="M7 5.5 15.5 4l4 6.5-2.8 7.5-8.8 1.5L4 13l3-7.5Z"/><circle cx="7" cy="5.5" r="1.45"/><circle cx="15.5" cy="4" r="1.45"/><circle cx="19.5" cy="10.5" r="1.45"/><circle cx="16.7" cy="18" r="1.45"/><circle cx="7.9" cy="19.5" r="1.45"/><circle cx="4" cy="13" r="1.45"/></svg></span><span><strong>Зоны</strong><small>Тематические границы</small></span><i aria-hidden="true"></i></button>
-          <div class="layer-group-content"><div class="layer-group-inner"><div class="layer-list">
+          <div class="layer-group-content"><div class="layer-group-inner"><div id="zones-layer-list" class="layer-list">
           <label class="layer-option"><span class="layer-copy"><strong>Полигон 90273</strong><small>QGIS · polygon_90273</small></span><input id="toggle-polygon-90273" data-exclusive-group="zones" type="checkbox"><span class="switch" aria-hidden="true"></span></label>
           </div></div></div>
         </section>
         </div>
         <button id="show-island-description" type="button"><span>Описание острова</span><span class="button-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6"/></svg></span></button>
+        <button id="create-layer-button" class="create-layer-button" type="button" hidden><span>Создать слой</span><span class="button-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span></button>
+        <button id="admin-editor-button" class="editor-menu-button" type="button" hidden><span>Редактор</span><span class="button-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 6h12M6 12h12M6 18h8"/></svg></span></button>
         </div>
         </div>
       </section>
@@ -108,12 +109,69 @@
           <button class="map-style-card is-active" type="button" data-map-style="default"><span class="style-preview preview-default"></span><strong>Стандартный</strong><small>Обычная карта</small></button>
           <button class="map-style-card" type="button" data-map-style="light"><span class="style-preview preview-light"></span><strong>Светлый</strong><small>Воздушная подложка</small></button>
           <button class="map-style-card" type="button" data-map-style="muted"><span class="style-preview preview-muted"></span><strong>Приглушённый</strong><small>Меньше насыщенности</small></button>
-          <button class="map-style-card" type="button" data-map-style="night"><span class="style-preview preview-night"></span><strong>Ночной</strong><small>Тёмный режим</small></button>
           <button class="map-style-card" type="button" data-map-style="nature"><span class="style-preview preview-nature"></span><strong>Природный</strong><small>Зелёные оттенки</small></button>
           <button class="map-style-card" type="button" data-map-style="contrast"><span class="style-preview preview-contrast"></span><strong>Контрастный</strong><small>Чётче дороги и подписи</small></button>
           <button class="map-style-card" type="button" data-map-style="minimal"><span class="style-preview preview-minimal"></span><strong>Минималистичный</strong><small>Спокойный вид</small></button>
           <button class="map-style-card" type="button" data-map-style="amur-mist"><span class="style-preview preview-amur-mist"></span><strong>Амурский туман</strong><small>Мягкая холодная подложка</small></button>
           <button class="map-style-card" type="button" data-map-style="emerald-island"><span class="style-preview preview-emerald-island"></span><strong>Изумрудный остров</strong><small>Глубокие природные оттенки</small></button>
+        </div>
+      </section>
+    </div>
+    <div id="create-layer-backdrop" class="create-layer-backdrop" aria-hidden="true">
+      <section class="create-layer-modal" role="dialog" aria-modal="true" aria-labelledby="create-layer-title">
+        <button id="close-create-layer" class="create-layer-close" type="button" aria-label="Закрыть создание слоя"></button>
+        <div class="create-layer-header">
+          <span class="create-layer-kicker">Leaflet · пользовательский источник</span>
+          <h2 id="create-layer-title">Создать слой</h2>
+          <p>Добавьте внешний или локальный слой по URL. Поддерживаются XYZ, TMS и WMS.</p>
+        </div>
+        <form id="create-layer-form" class="create-layer-form">
+          <div class="create-layer-grid">
+            <label><span>Название слоя</span><input id="custom-layer-name" name="name" maxlength="60" placeholder="Например: Архивная подложка" required></label>
+            <label><span>Куда добавить слой?</span><select id="custom-layer-group" name="group"><option value="maps">Карты</option><option value="zones">Зоны</option></select></label>
+            <label><span>Шаблон</span><select id="custom-layer-provider" name="provider"><option value="custom">Свой URL</option><option value="osm">OpenStreetMap</option><option value="local-xyz">Локальный XYZ</option><option value="local-wms">Локальный WMS</option><option value="google-roads">Google Roads</option><option value="google-satellite">Google Satellite</option><option value="yandex-custom">Yandex Custom</option></select></label>
+            <label><span>Тип слоя</span><select id="custom-layer-type" name="type"><option value="xyz">XYZ</option><option value="tms">TMS</option><option value="wms">WMS</option></select></label>
+            <label><span>URL</span><input id="custom-layer-url" name="url" placeholder="https://server/tiles/{z}/{x}/{y}.png" required></label>
+            <label><span>Мин. масштаб</span><input id="custom-layer-minzoom" name="minZoom" type="number" min="0" max="22" value="0"></label>
+            <label><span>Макс. масштаб</span><input id="custom-layer-maxzoom" name="maxZoom" type="number" min="0" max="22" value="22"></label>
+            <label class="create-layer-wide"><span>Attribution</span><input id="custom-layer-attribution" name="attribution" placeholder="Источник данных"></label>
+          </div>
+          <div id="custom-layer-wms-fields" class="create-layer-wms-fields" hidden>
+            <label><span>WMS layers</span><input id="custom-layer-wms-layers" name="wmsLayers" placeholder="layer_name"></label>
+            <label><span>Styles</span><input id="custom-layer-wms-styles" name="wmsStyles" placeholder="по умолчанию"></label>
+            <label><span>Format</span><input id="custom-layer-wms-format" name="wmsFormat" value="image/png"></label>
+            <label><span>Version</span><input id="custom-layer-wms-version" name="wmsVersion" value="1.3.0"></label>
+            <label class="create-layer-checkbox"><input id="custom-layer-transparent" name="wmsTransparent" type="checkbox" checked><span>Прозрачный фон WMS</span></label>
+          </div>
+          <span id="create-layer-status" class="create-layer-status" role="status"></span>
+          <div class="create-layer-actions">
+            <button id="cancel-create-layer" class="create-layer-secondary" type="button">Отмена</button>
+            <button id="submit-create-layer" class="create-layer-submit" type="submit">Добавить слой</button>
+          </div>
+        </form>
+      </section>
+    </div>
+    <div id="editor-backdrop" class="editor-backdrop" aria-hidden="true">
+      <section class="editor-modal" role="dialog" aria-modal="true" aria-labelledby="editor-title">
+        <button id="close-editor" class="editor-close" type="button" aria-label="Закрыть редактор"></button>
+        <div class="editor-header">
+          <span class="editor-kicker">Администрирование</span>
+          <h2 id="editor-title">Редактор</h2>
+          <p id="editor-description">Выберите режим редактирования.</p>
+        </div>
+        <div id="editor-mode-view" class="editor-mode-grid">
+          <button id="open-zone-editor" class="editor-mode-card" type="button"><strong>Редактор зон</strong><small>Функции редактирования зон будут добавлены позже.</small></button>
+          <button id="open-layer-editor" class="editor-mode-card" type="button"><strong>Редактор слоёв</strong><small>Изменение параметров и удаление созданных слоёв.</small></button>
+        </div>
+        <div id="zone-editor-view" class="editor-placeholder" hidden>
+          <h3>Редактор зон</h3>
+          <p>Функции редактирования зон будут добавлены позже.</p>
+          <button id="back-from-zone-editor" class="editor-secondary" type="button">Назад</button>
+        </div>
+        <div id="layer-editor-view" class="layer-editor-view" hidden>
+          <div id="layer-editor-list" class="layer-editor-list"></div>
+          <div class="layer-editor-hint">Выберите слой из списка. Удаление доступно только здесь и только для созданных администратором слоёв.</div>
+          <button id="back-from-layer-editor" class="editor-secondary" type="button">Назад</button>
         </div>
       </section>
     </div>
