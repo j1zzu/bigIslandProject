@@ -84,6 +84,8 @@
   const layers = {};
   const customLayers = [];
   const CUSTOM_LAYERS_KEY = 'customMapLayers';
+  const SYSTEM_LAYER_OVERRIDES_KEY = 'systemMapLayerOverrides';
+  let systemLayers = [];
   let coordinateFrame;
   let coordinateFadeTimer;
   let loaderHidden = false;
@@ -294,6 +296,20 @@
   layers.qgisOsm = createWmsLayer(config.wmsLayers.osm);
   layers.googleSatellite = createWmsLayer(config.wmsLayers.googleSatellite);
   layers.esri = createWmsLayer(config.wmsLayers.esri);
+
+  systemLayers = [
+    { id:'system-basemap', key:'basemap', inputId:'toggle-basemap', name:'OpenStreetMap', label:'Основная карта', group:'maps', provider:'osm', type:'xyz', url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png', minZoom:0, maxZoom:22, attribution:'© OpenStreetMap', editable:true, deletable:false },
+    { id:'system-yandex-roads', key:'yandexRoads', inputId:'toggle-yandex-roads', name:'Яндекс — дороги', label:'QGIS · Yandex_Roads', group:'maps', provider:'local-wms', type:'wms', url:config.qgisWmsUrl, minZoom:0, maxZoom:22, attribution:'QGIS Server', wmsLayers:config.wmsLayers.yandexRoads, wmsStyles:'', wmsFormat:'image/png', wmsVersion:'1.3.0', wmsTransparent:true, editable:true, deletable:false },
+    { id:'system-ortophoto', key:'ortophoto', inputId:'toggle-ortophoto', name:'Ортофотоплан', label:'QGIS · Ortophoto', group:'maps', provider:'local-wms', type:'wms', url:config.qgisWmsUrl, minZoom:0, maxZoom:22, attribution:'QGIS Server', wmsLayers:config.wmsLayers.ortophoto, wmsStyles:'', wmsFormat:'image/png', wmsVersion:'1.3.0', wmsTransparent:true, editable:true, deletable:false },
+    { id:'system-yandex-satellite', key:'yandexSatellite', inputId:'toggle-yandex-satellite', name:'Яндекс — спутник', label:'QGIS · YA_SAT_zoom22', group:'maps', provider:'local-wms', type:'wms', url:config.qgisWmsUrl, minZoom:0, maxZoom:22, attribution:'QGIS Server', wmsLayers:config.wmsLayers.yandexSatellite, wmsStyles:'', wmsFormat:'image/png', wmsVersion:'1.3.0', wmsTransparent:true, editable:true, deletable:false },
+    { id:'system-yandex-satellite-alt', key:'yandexSatelliteAlt', inputId:'toggle-yandex-satellite-alt', name:'Яндекс — спутник 2', label:'QGIS · YA_SA', group:'maps', provider:'local-wms', type:'wms', url:config.qgisWmsUrl, minZoom:0, maxZoom:22, attribution:'QGIS Server', wmsLayers:config.wmsLayers.yandexSatelliteAlt, wmsStyles:'', wmsFormat:'image/png', wmsVersion:'1.3.0', wmsTransparent:true, editable:true, deletable:false },
+    { id:'system-mapbox', key:'mapbox', inputId:'toggle-mapbox', name:'Mapbox', label:'QGIS · MAPBOX', group:'maps', provider:'local-wms', type:'wms', url:config.qgisWmsUrl, minZoom:0, maxZoom:22, attribution:'QGIS Server', wmsLayers:config.wmsLayers.mapbox, wmsStyles:'', wmsFormat:'image/png', wmsVersion:'1.3.0', wmsTransparent:true, editable:true, deletable:false },
+    { id:'system-qgis-osm', key:'qgisOsm', inputId:'toggle-qgis-osm', name:'OSM через QGIS', label:'QGIS · OSM', group:'maps', provider:'local-wms', type:'wms', url:config.qgisWmsUrl, minZoom:0, maxZoom:22, attribution:'QGIS Server', wmsLayers:config.wmsLayers.osm, wmsStyles:'', wmsFormat:'image/png', wmsVersion:'1.3.0', wmsTransparent:true, editable:true, deletable:false },
+    { id:'system-google-satellite', key:'googleSatellite', inputId:'toggle-google-satellite', name:'Google — спутник', label:'QGIS · G_Sat', group:'maps', provider:'local-wms', type:'wms', url:config.qgisWmsUrl, minZoom:0, maxZoom:22, attribution:'QGIS Server', wmsLayers:config.wmsLayers.googleSatellite, wmsStyles:'', wmsFormat:'image/png', wmsVersion:'1.3.0', wmsTransparent:true, editable:true, deletable:false },
+    { id:'system-esri', key:'esri', inputId:'toggle-esri', name:'Esri', label:'QGIS · Esri', group:'maps', provider:'local-wms', type:'wms', url:config.qgisWmsUrl, minZoom:0, maxZoom:22, attribution:'QGIS Server', wmsLayers:config.wmsLayers.esri, wmsStyles:'', wmsFormat:'image/png', wmsVersion:'1.3.0', wmsTransparent:true, editable:true, deletable:false },
+    { id:'system-local-island-tiles', key:'localIslandTiles', inputId:'toggle-local-island-tiles', name:'Тайлы острова', label:'Локально · C:\\island_imgs\\tile', group:'maps', provider:'local-xyz', type:'xyz', url:config.localTilesUrl, minZoom:12, maxZoom:22, attribution:'Локальные тайлы', editable:true, deletable:false },
+    { id:'system-polygon-90273', key:'polygon90273', inputId:'toggle-polygon-90273', name:'Полигон 90273', label:'QGIS · polygon_90273', group:'zones', provider:'local-wms', type:'wms', url:config.qgisWmsUrl, minZoom:12, maxZoom:22, attribution:'QGIS Server', wmsLayers:config.wmsLayers.polygon90273, wmsStyles:'', wmsFormat:'image/png', wmsVersion:'1.3.0', wmsTransparent:true, editable:true, deletable:false }
+  ];
   applyMapStyle(savedMapStyle);
 
   const semanticLabels = {
@@ -318,6 +334,140 @@
     'yandex-custom':{ type:'xyz', url:'', minZoom:0, maxZoom:22, attribution:'Yandex' }
   };
 
+  function isSystemLayerId(id) {
+    return String(id || '').startsWith('system-');
+  }
+
+  function findSystemLayer(id) {
+    return systemLayers.find((item) => item.id === id);
+  }
+
+  function findEditorLayer(id) {
+    return findSystemLayer(id) || customLayers.find((item) => item.id === id);
+  }
+
+  function getLayerEditorItems() {
+    return [...systemLayers, ...customLayers];
+  }
+
+  function updateSystemLayerLabel(item) {
+    const input = document.querySelector(`#${item.inputId}`);
+    const copy = input?.closest('.layer-option')?.querySelector('.layer-copy');
+    if (!copy) return;
+    copy.querySelector('strong').textContent = item.name;
+    copy.querySelector('small').textContent = item.label || `${item.type.toUpperCase()} · ${item.url}`;
+  }
+
+  function createSystemLeafletLayer(item) {
+    if (item.key === 'localIslandTiles') {
+      return new FeatheredTileLayer(item.url, {
+        pane:'islandTilesPane',
+        minZoom:item.minZoom,
+        maxZoom:item.maxZoom,
+        minNativeZoom:13,
+        maxNativeZoom:18,
+        opacity:1,
+        noWrap:true,
+        keepBuffer:3,
+        attribution:item.attribution || undefined,
+        className:'local-island-tile'
+      });
+    }
+    if (item.type === 'wms') {
+      return L.tileLayer.wms(item.url, {
+        layers:item.wmsLayers,
+        styles:item.wmsStyles || '',
+        format:item.wmsFormat || 'image/png',
+        transparent:item.wmsTransparent !== false,
+        version:item.wmsVersion || '1.3.0',
+        crs:L.CRS.EPSG3857,
+        tiled:true,
+        minZoom:item.minZoom,
+        maxZoom:item.maxZoom,
+        attribution:item.attribution || undefined,
+        pane:getLayerPane(item)
+      });
+    }
+    return L.tileLayer(item.url, {
+      pane:getLayerPane(item),
+      minZoom:item.minZoom,
+      maxZoom:item.maxZoom,
+      maxNativeZoom:item.maxZoom,
+      attribution:item.attribution || undefined
+    });
+  }
+
+  function persistSystemLayerOverrides() {
+    const overrides = {};
+    systemLayers.forEach((item) => {
+      overrides[item.id] = {
+        name:item.name,
+        label:item.label,
+        provider:item.provider,
+        type:item.type,
+        url:item.url,
+        minZoom:item.minZoom,
+        maxZoom:item.maxZoom,
+        attribution:item.attribution,
+        wmsLayers:item.wmsLayers,
+        wmsStyles:item.wmsStyles,
+        wmsFormat:item.wmsFormat,
+        wmsVersion:item.wmsVersion,
+        wmsTransparent:item.wmsTransparent
+      };
+    });
+    localStorage.setItem(SYSTEM_LAYER_OVERRIDES_KEY, JSON.stringify(overrides));
+  }
+
+  function applySystemLayerConfig(id, layerConfig, { persist = true } = {}) {
+    const item = findSystemLayer(id);
+    if (!item) throw new Error('Системный слой не найден.');
+    const next = {
+      ...item,
+      ...layerConfig,
+      id:item.id,
+      key:item.key,
+      inputId:item.inputId,
+      group:item.group,
+      deletable:false,
+      editable:true,
+      name:String(layerConfig.name || item.name).trim(),
+      type:String(layerConfig.type || item.type).toLowerCase(),
+      url:String(layerConfig.url || item.url).trim(),
+      minZoom:Number(layerConfig.minZoom),
+      maxZoom:Number(layerConfig.maxZoom),
+      label:`${String(layerConfig.type || item.type).toUpperCase()} · ${String(layerConfig.type || item.type).toLowerCase() === 'wms' ? (layerConfig.wmsLayers || item.wmsLayers || item.url) : (layerConfig.url || item.url)}`
+    };
+    const errors = validateCustomLayerConfig(next, { allowSameId:id });
+    if (errors.length) throw new Error(errors[0]);
+    const input = document.querySelector(`#${item.inputId}`);
+    const wasVisible = Boolean(input?.checked && layers[item.key] && map.hasLayer(layers[item.key]));
+    if (layers[item.key] && map.hasLayer(layers[item.key])) map.removeLayer(layers[item.key]);
+    Object.assign(item, next);
+    if (item.key !== 'polygon90273') layers[item.key] = createSystemLeafletLayer(item);
+    updateSystemLayerLabel(item);
+    if (wasVisible) layers[item.key].addTo(map);
+    if (persist) persistSystemLayerOverrides();
+    renderLayerEditorList();
+  }
+
+  function loadSystemLayerOverrides() {
+    let overrides = {};
+    try {
+      overrides = JSON.parse(localStorage.getItem(SYSTEM_LAYER_OVERRIDES_KEY) || '{}');
+    } catch (error) {
+      console.warn('Не удалось прочитать настройки системных слоёв', error);
+    }
+    systemLayers.forEach((item) => {
+      if (overrides[item.id]) {
+        try { applySystemLayerConfig(item.id, overrides[item.id], { persist:false }); }
+        catch (error) { console.warn('Настройка системного слоя пропущена:', item.id, error.message); }
+      } else {
+        updateSystemLayerLabel(item);
+      }
+    });
+  }
+
   function showCreateLayerModal(layerId = '') {
     if (!isAdmin) {
       ui.message.textContent = 'Создание и редактирование пользовательских слоёв доступно только администратору.';
@@ -325,13 +475,14 @@
       return;
     }
     editingCustomLayerId = layerId;
-    const layerConfig = layerId ? customLayers.find((item) => item.id === layerId) : null;
+    const layerConfig = layerId ? findEditorLayer(layerId) : null;
     document.querySelector('#create-layer-title').textContent = layerConfig ? 'Редактировать слой' : 'Создать слой';
     document.querySelector('.create-layer-header p').textContent = layerConfig ? 'Измените параметры слоя. После сохранения слой будет пересоздан на карте.' : 'Добавьте внешний или локальный слой по URL. Поддерживаются XYZ, TMS и WMS.';
     ui.createLayerSubmit.textContent = layerConfig ? 'Сохранить слой' : 'Добавить слой';
     if (layerConfig) fillCustomLayerForm(layerConfig);
     else {
       ui.createLayerForm.reset();
+      ui.customGroup.disabled = false;
       applyProviderPreset('custom');
     }
     ui.createLayerStatus.textContent = '';
@@ -345,6 +496,7 @@
   function hideCreateLayerModal() {
     ui.createLayerBackdrop.classList.remove('is-visible');
     ui.createLayerBackdrop.setAttribute('aria-hidden', 'true');
+    ui.customGroup.disabled = false;
     editingCustomLayerId = '';
   }
 
@@ -373,6 +525,7 @@
   function fillCustomLayerForm(layerConfig) {
     ui.customName.value = layerConfig.name || '';
     ui.customGroup.value = layerConfig.group || 'maps';
+    ui.customGroup.disabled = isSystemLayerId(layerConfig.id);
     ui.customProvider.value = layerConfig.provider || 'custom';
     ui.customType.value = layerConfig.type || 'xyz';
     ui.customUrl.value = layerConfig.url || '';
@@ -420,7 +573,7 @@
     const url = String(layerConfig.url || '').trim();
     if (!name) errors.push('Укажите название слоя.');
     if (name.length > 60) errors.push('Название слоя должно быть не длиннее 60 символов.');
-    if (customLayers.some((item) => item.id !== allowSameId && item.name.toLowerCase() === name.toLowerCase())) errors.push('Слой с таким названием уже есть.');
+    if (getLayerEditorItems().some((item) => item.id !== allowSameId && item.name.toLowerCase() === name.toLowerCase())) errors.push('Слой с таким названием уже есть.');
     if (!['maps','zones'].includes(layerConfig.group || 'maps')) errors.push('Выберите группу слоя: Карты или Зоны.');
     if (!['xyz','tms','wms'].includes(layerConfig.type)) errors.push('Выберите тип слоя: XYZ, TMS или WMS.');
     if (!url || !/^(https?:\/\/|\/)/i.test(url)) errors.push('URL должен начинаться с http://, https:// или /.');
@@ -563,8 +716,9 @@
 
   function renderLayerEditorList() {
     if (!ui.layerEditorList) return;
-    if (!customLayers.length) {
-      ui.layerEditorList.innerHTML = '<p class="editor-empty">Созданных администратором слоёв пока нет.</p>';
+    const editorItems = getLayerEditorItems();
+    if (!editorItems.length) {
+      ui.layerEditorList.innerHTML = '<p class="editor-empty">Слоёв для редактирования пока нет.</p>';
       return;
     }
     const groups = [
@@ -572,18 +726,18 @@
       ['zones', 'Зоны']
     ];
     ui.layerEditorList.innerHTML = groups.map(([group, title]) => {
-      const groupLayers = customLayers.filter((item) => (item.group || 'maps') === group);
+      const groupLayers = editorItems.filter((item) => (item.group || 'maps') === group);
       if (!groupLayers.length) return '';
       return `<section class="layer-editor-group"><h3>${title}</h3>${groupLayers.map((item) => `
         <article class="layer-editor-item">
           <button class="layer-editor-select" type="button" data-custom-layer-edit="${escapeHtml(item.id)}">
             <strong>${escapeHtml(item.name)}</strong>
-            <small>${escapeHtml(item.type.toUpperCase())} · ${escapeHtml(item.url)}</small>
+            <small>${isSystemLayerId(item.id) ? 'Системный слой' : 'Созданный слой'} · ${escapeHtml(item.type.toUpperCase())} · ${escapeHtml(item.type === 'wms' ? (item.wmsLayers || item.url) : item.url)}</small>
           </button>
-          <button class="layer-editor-delete" type="button" data-custom-layer-delete="${escapeHtml(item.id)}" aria-label="Удалить слой ${escapeHtml(item.name)}">Удалить</button>
+          ${item.deletable === false || isSystemLayerId(item.id) ? '<span class="layer-editor-badge">без удаления</span>' : `<button class="layer-editor-delete" type="button" data-custom-layer-delete="${escapeHtml(item.id)}" aria-label="Удалить слой ${escapeHtml(item.name)}">Удалить</button>`}
         </article>
       `).join('')}</section>`;
-    }).join('') || '<p class="editor-empty">Созданных администратором слоёв пока нет.</p>';
+    }).join('') || '<p class="editor-empty">Слоёв для редактирования пока нет.</p>';
   }
 
   function showEditorMode() {
@@ -684,6 +838,7 @@
     return next;
   }
 
+  loadSystemLayerOverrides();
   loadCustomLayers();
 
   function showZoneCard(feature) {
@@ -889,7 +1044,8 @@
       return;
     }
     try {
-      if (editingCustomLayerId) updateCustomLayer(editingCustomLayerId, layerConfig);
+      if (editingCustomLayerId && isSystemLayerId(editingCustomLayerId)) applySystemLayerConfig(editingCustomLayerId, layerConfig);
+      else if (editingCustomLayerId) updateCustomLayer(editingCustomLayerId, layerConfig);
       else addCustomLayer(layerConfig);
       const actionText = editingCustomLayerId ? 'сохранён' : 'добавлен';
       ui.createLayerForm.reset();
