@@ -18,6 +18,8 @@ test('serves config, frontend and GeoJSON', async (t) => {
   assert.equal(config.zoom, 12);
   assert.equal(config.qgisWmsUrl, '/qgis/wms');
   assert.equal(config.localTilesUrl, '/local-tiles/{z}/{x}/{y}.png');
+  assert.equal(config.tileProxySources.osm, '/api/tiles/osm/{z}/{x}/{y}.png');
+  assert.equal(config.tileProxySources.localIslandTiles, '/api/tiles/localIslandTiles/{z}/{x}/{y}.png');
   assert.equal(config.wmsLayers.yandexRoads, 'Yandex_Roads');
   assert.equal(config.wmsLayers.googleSatellite, 'G_Sat');
   assert.equal(config.wmsLayers.polygon90273, 'polygon_90273');
@@ -46,6 +48,17 @@ test('serves config, frontend and GeoJSON', async (t) => {
   assert.doesNotMatch(html, /data-map-style="night"/);
   assert.match(html, /src="\/vacation-beach-icon\.svg"/);
 
+  const fallbackTile = await fetch(`${base}/api/tiles/localIslandTiles/12/0/0.png`);
+  assert.equal(fallbackTile.status, 200);
+  assert.match(fallbackTile.headers.get('content-type'), /image\/png/);
+  assert.match(fallbackTile.headers.get('cache-control'), /no-store|immutable/);
+
+  const invalidTileSource = await fetch(`${base}/api/tiles/unknown/12/0/0.png`);
+  assert.equal(invalidTileSource.status, 404);
+
+  const tileStatsUnauthorized = await fetch(`${base}/api/tiles/stats`);
+  assert.equal(tileStatsUnauthorized.status, 401);
+
   const favicon = await fetch(`${base}/favicon.svg`);
   assert.equal(favicon.status, 200);
   assert.match(favicon.headers.get('content-type'), /image\/svg\+xml/);
@@ -67,6 +80,13 @@ test('serves config, frontend and GeoJSON', async (t) => {
   assert.equal(login.status, 200);
   const { token } = await login.json();
   assert.ok(token);
+
+  const tileStats = await fetch(`${base}/api/tiles/stats`, {
+    headers:{'x-admin-token':token}
+  });
+  assert.equal(tileStats.status, 200);
+  const tileStatsJson = await tileStats.json();
+  assert.ok(Array.isArray(tileStatsJson.sources));
 
   const forbiddenAdminTransaction = await fetch(`${base}/qgis/wfs`, {
     method:'POST', headers:{'content-type':'text/xml','x-admin-token':token}, body:'<wfs:Delete />'

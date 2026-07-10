@@ -197,7 +197,7 @@
     cursorIndicator.classList.add('is-visible');
   }
 
-  layers.basemap = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  layers.basemap = L.tileLayer(config.tileProxySources?.osm || '/api/tiles/osm/{z}/{x}/{y}.png', {
     pane:'baseMapsPane',
     maxNativeZoom: 19,
     maxZoom: 22,
@@ -214,6 +214,22 @@
   const FeatheredTileLayer = L.TileLayer.extend({
     createTile(coords, done) {
       const bounds = localTileBounds[coords.z];
+      const size = this.getTileSize();
+      const makeTransparentTile = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = size.x;
+        canvas.height = size.y;
+        if (typeof done === 'function') done(null, canvas);
+        return canvas;
+      };
+      if (bounds && (
+        coords.x < bounds.minX ||
+        coords.x > bounds.maxX ||
+        coords.y < bounds.minY ||
+        coords.y > bounds.maxY
+      )) {
+        return makeTransparentTile();
+      }
       const edges = bounds ? {
         left:coords.x === bounds.minX,
         right:coords.x === bounds.maxX,
@@ -223,7 +239,6 @@
       const needsFeather = edges.left || edges.right || edges.top || edges.bottom;
       if (!needsFeather) return L.TileLayer.prototype.createTile.call(this, coords, done);
       const canvas = document.createElement('canvas');
-      const size = this.getTileSize();
       canvas.width = size.x;
       canvas.height = size.y;
       const image = document.createElement('img');
@@ -268,7 +283,7 @@
       return canvas;
     }
   });
-  layers.localIslandTiles = new FeatheredTileLayer(config.localTilesUrl, {
+  layers.localIslandTiles = new FeatheredTileLayer(config.tileProxySources?.localIslandTiles || config.localTilesUrl, {
     pane:'islandTilesPane',
     minZoom:12,
     maxZoom:22,
@@ -298,7 +313,7 @@
   layers.esri = createWmsLayer(config.wmsLayers.esri);
 
   systemLayers = [
-    { id:'system-basemap', key:'basemap', inputId:'toggle-basemap', name:'OpenStreetMap', label:'Основная карта', group:'maps', provider:'osm', type:'xyz', url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png', minZoom:0, maxZoom:22, attribution:'© OpenStreetMap', editable:true, deletable:false },
+    { id:'system-basemap', key:'basemap', inputId:'toggle-basemap', name:'OpenStreetMap', label:'Основная карта', group:'maps', provider:'osm', type:'xyz', url:config.tileProxySources?.osm || '/api/tiles/osm/{z}/{x}/{y}.png', minZoom:0, maxZoom:22, attribution:'© OpenStreetMap', editable:true, deletable:false },
     { id:'system-yandex-roads', key:'yandexRoads', inputId:'toggle-yandex-roads', name:'Яндекс — дороги', label:'QGIS · Yandex_Roads', group:'maps', provider:'local-wms', type:'wms', url:config.qgisWmsUrl, minZoom:0, maxZoom:22, attribution:'QGIS Server', wmsLayers:config.wmsLayers.yandexRoads, wmsStyles:'', wmsFormat:'image/png', wmsVersion:'1.3.0', wmsTransparent:true, editable:true, deletable:false },
     { id:'system-ortophoto', key:'ortophoto', inputId:'toggle-ortophoto', name:'Ортофотоплан', label:'QGIS · Ortophoto', group:'maps', provider:'local-wms', type:'wms', url:config.qgisWmsUrl, minZoom:0, maxZoom:22, attribution:'QGIS Server', wmsLayers:config.wmsLayers.ortophoto, wmsStyles:'', wmsFormat:'image/png', wmsVersion:'1.3.0', wmsTransparent:true, editable:true, deletable:false },
     { id:'system-yandex-satellite', key:'yandexSatellite', inputId:'toggle-yandex-satellite', name:'Яндекс — спутник', label:'QGIS · YA_SAT_zoom22', group:'maps', provider:'local-wms', type:'wms', url:config.qgisWmsUrl, minZoom:0, maxZoom:22, attribution:'QGIS Server', wmsLayers:config.wmsLayers.yandexSatellite, wmsStyles:'', wmsFormat:'image/png', wmsVersion:'1.3.0', wmsTransparent:true, editable:true, deletable:false },
@@ -307,7 +322,7 @@
     { id:'system-qgis-osm', key:'qgisOsm', inputId:'toggle-qgis-osm', name:'OSM через QGIS', label:'QGIS · OSM', group:'maps', provider:'local-wms', type:'wms', url:config.qgisWmsUrl, minZoom:0, maxZoom:22, attribution:'QGIS Server', wmsLayers:config.wmsLayers.osm, wmsStyles:'', wmsFormat:'image/png', wmsVersion:'1.3.0', wmsTransparent:true, editable:true, deletable:false },
     { id:'system-google-satellite', key:'googleSatellite', inputId:'toggle-google-satellite', name:'Google — спутник', label:'QGIS · G_Sat', group:'maps', provider:'local-wms', type:'wms', url:config.qgisWmsUrl, minZoom:0, maxZoom:22, attribution:'QGIS Server', wmsLayers:config.wmsLayers.googleSatellite, wmsStyles:'', wmsFormat:'image/png', wmsVersion:'1.3.0', wmsTransparent:true, editable:true, deletable:false },
     { id:'system-esri', key:'esri', inputId:'toggle-esri', name:'Esri', label:'QGIS · Esri', group:'maps', provider:'local-wms', type:'wms', url:config.qgisWmsUrl, minZoom:0, maxZoom:22, attribution:'QGIS Server', wmsLayers:config.wmsLayers.esri, wmsStyles:'', wmsFormat:'image/png', wmsVersion:'1.3.0', wmsTransparent:true, editable:true, deletable:false },
-    { id:'system-local-island-tiles', key:'localIslandTiles', inputId:'toggle-local-island-tiles', name:'Тайлы острова', label:'Локально · C:\\island_imgs\\tile', group:'maps', provider:'local-xyz', type:'xyz', url:config.localTilesUrl, minZoom:12, maxZoom:22, attribution:'Локальные тайлы', editable:true, deletable:false },
+    { id:'system-local-island-tiles', key:'localIslandTiles', inputId:'toggle-local-island-tiles', name:'Тайлы острова', label:'Локально · C:\\island_imgs\\tile', group:'maps', provider:'local-xyz', type:'xyz', url:config.tileProxySources?.localIslandTiles || config.localTilesUrl, minZoom:12, maxZoom:22, attribution:'Локальные тайлы', editable:true, deletable:false },
     { id:'system-polygon-90273', key:'polygon90273', inputId:'toggle-polygon-90273', name:'Полигон 90273', label:'QGIS · polygon_90273', group:'zones', provider:'local-wms', type:'wms', url:config.qgisWmsUrl, minZoom:12, maxZoom:22, attribution:'QGIS Server', wmsLayers:config.wmsLayers.polygon90273, wmsStyles:'', wmsFormat:'image/png', wmsVersion:'1.3.0', wmsTransparent:true, editable:true, deletable:false }
   ];
   applyMapStyle(savedMapStyle);
@@ -326,11 +341,11 @@
 
   const providerPresets = {
     custom:{ type:'xyz', url:'', minZoom:12, maxZoom:22, attribution:'' },
-    osm:{ type:'xyz', url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png', minZoom:0, maxZoom:22, attribution:'© OpenStreetMap' },
-    'local-xyz':{ type:'xyz', url:'/local-tiles/{z}/{x}/{y}.png', minZoom:12, maxZoom:22, attribution:'Локальные тайлы' },
+    osm:{ type:'xyz', url:config.tileProxySources?.osm || '/api/tiles/osm/{z}/{x}/{y}.png', minZoom:0, maxZoom:22, attribution:'© OpenStreetMap' },
+    'local-xyz':{ type:'xyz', url:config.tileProxySources?.localIslandTiles || '/api/tiles/localIslandTiles/{z}/{x}/{y}.png', minZoom:12, maxZoom:22, attribution:'Локальные тайлы' },
     'local-wms':{ type:'wms', url:config.qgisWmsUrl, minZoom:12, maxZoom:22, attribution:'QGIS Server', wmsLayers:'', wmsStyles:'', wmsFormat:'image/png', wmsVersion:'1.3.0', wmsTransparent:true },
-    'google-roads':{ type:'xyz', url:'https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', minZoom:0, maxZoom:22, attribution:'Google', subdomains:'0123' },
-    'google-satellite':{ type:'xyz', url:'https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', minZoom:0, maxZoom:22, attribution:'Google', subdomains:'0123' },
+    'google-roads':{ type:'xyz', url:config.tileProxySources?.googleRoads || '/api/tiles/googleRoads/{z}/{x}/{y}.png', minZoom:0, maxZoom:20, attribution:'Google' },
+    'google-satellite':{ type:'xyz', url:config.tileProxySources?.googleSatellite || '/api/tiles/googleSatellite/{z}/{x}/{y}.jpg', minZoom:0, maxZoom:20, attribution:'Google' },
     'yandex-custom':{ type:'xyz', url:'', minZoom:0, maxZoom:22, attribution:'Yandex' }
   };
 
